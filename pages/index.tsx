@@ -1,6 +1,11 @@
 import React from 'react';
+import { useWallet } from '@solana/wallet-adapter-react';
+import { useRouter } from 'next/router';
 
 const Home: React.FC = () => {
+  const { connected } = useWallet();
+  const router = useRouter();
+
   return (
     <div className="min-h-screen bg-gray-100 py-6 flex flex-col justify-center sm:py-12">
       <div className="relative py-3 sm:max-w-xl sm:mx-auto">
@@ -11,6 +16,19 @@ const Home: React.FC = () => {
               <div className="py-8 text-base leading-6 space-y-4 text-gray-700 sm:text-lg sm:leading-7">
                 <h1 className="text-3xl font-bold text-gray-900 mb-8">EONIC Vault</h1>
                 <p className="mb-4">Welcome to the future of community engagement.</p>
+                {connected && (
+                  <button
+                    onClick={() => router.push('/dashboard')}
+                    className="mt-4 px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-lg hover:from-cyan-600 hover:to-blue-600 transition-all"
+                  >
+                    Enter Dashboard
+                  </button>
+                )}
+                {!connected && (
+                  <p className="text-sm text-gray-500 mt-4">
+                    Connect your wallet to access the dashboard
+                  </p>
+                )}
               </div>
             </div>
           </div>
