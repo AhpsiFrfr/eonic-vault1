@@ -1,71 +1,142 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useWallet } from '@solana/wallet-adapter-react';
-import { ChatMessage, sendMessage, subscribeToMessages, getMessages } from '../utils/supabase';
+import { supabase, ChatMessage, MessageReaction } from '../utils/supabase';
+import { PaperClipIcon, EmojiHappyIcon, ReplyIcon } from '@heroicons/react/outline';
 
-export const Chat: React.FC = () => {
-  const { publicKey } = useWallet();
+interface ChatProps {
+  walletAddress: string;
+  room?: string;
+}
+
+export default function Chat({ walletAddress, room = 'general' }: ChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
-  const [room, setRoom] = useState('general');
+  const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
   useEffect(() => {
-    // Load existing messages
-    getMessages(room).then((existingMessages) => {
-      setMessages(existingMessages.reverse());
-      scrollToBottom();
-    });
-
-    // Subscribe to new messages
-    const subscription = subscribeToMessages(room, (newMessage) => {
-      setMessages((prev) => [...prev, newMessage]);
-      scrollToBottom();
-    });
+    loadMessages();
+    const subscription = supabase
+      .channel(`messages:${room}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'messages', filter: `room=eq.${room}` }, handleNewMessage)
+      .subscribe();
 
     return () => {
       subscription.unsubscribe();
     };
   }, [room]);
 
-  const handleSendMessage = async (e: React.FormEvent) => {
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const loadMessages = async () => {
+    const { data, error } = await supabase
+      .from('messages')
+      .select(`
+        *,
+        reactions (*),
+        attachments (*)
+      `)
+      .eq('room', room)
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      console.error('Error loading messages:', error);
+      return;
+    }
+
+    setMessages(data || []);
+  };
+
+  const handleNewMessage = (payload: any) => {
+    if (payload.new) {
+      setMessages((prev) => [...prev, payload.new]);
+    }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setSelectedFile(e.target.files[0]);
+    }
+  };
+
+  const uploadFile = async (file: File) => {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Math.random()}.${fileExt}`;
+    const filePath = `${room}/${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('attachments')
+      .upload(filePath, file);
+
+    if (uploadError) throw uploadError;
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('attachments')
+      .getPublicUrl(filePath);
+
+    return {
+      type: file.type.startsWith('image/') ? 'image' : 'file',
+      url: publicUrl,
+      filename: file.name,
+      size: file.size,
+    };
+  };
+
+  const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim() || !publicKey) return;
+    if (!newMessage.trim() && !selectedFile) return;
 
     try {
-      await sendMessage(newMessage, publicKey.toString(), room);
+      let attachment;
+      if (selectedFile) {
+        attachment = await uploadFile(selectedFile);
+      }
+
+      await supabase.from('messages').insert({
+        content: newMessage.trim(),
+        sender_address: walletAddress,
+        room,
+        parent_id: replyTo?.id,
+        ...(attachment ? { attachments: [attachment] } : {}),
+      });
+
       setNewMessage('');
+      setSelectedFile(null);
+      setReplyTo(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     } catch (error) {
       console.error('Error sending message:', error);
     }
   };
 
-  const rooms = ['general', 'nft-chat', 'cabal'];
+  const addReaction = async (messageId: string, emoji: string) => {
+    try {
+      await supabase.from('message_reactions').insert({
+        message_id: messageId,
+        user_address: walletAddress,
+        emoji,
+      });
+    } catch (error) {
+      console.error('Error adding reaction:', error);
+    }
+  };
+
+  const formatAddress = (address: string) => {
+    return `${address.slice(0, 4)}...${address.slice(-4)}`;
+  };
 
   return (
-    <div className="flex flex-col h-[500px] bg-white rounded-lg shadow-md">
-      {/* Room Selection */}
-      <div className="border-b border-gray-200 p-4">
-        <div className="flex space-x-2">
-          {rooms.map((r) => (
-            <button
-              key={r}
-              onClick={() => setRoom(r)}
-              className={`px-3 py-1 rounded-full text-sm ${r === room
-                ? 'bg-blue-500 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-            >
-              #{r}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4">
+    <div className="flex flex-col h-full">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map((message) => (
           <div
             key={message.id}
@@ -90,22 +161,40 @@ export const Chat: React.FC = () => {
       </div>
 
       {/* Message Input */}
-      <form onSubmit={handleSendMessage} className="p-4 border-t">
-        <div className="flex space-x-2">
+      <form onSubmit={sendMessage} className="p-4 border-t">
+        <div className="flex items-center gap-2">
           <input
             type="text"
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
-            placeholder={`Message #${room}...`}
-            className="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="Type your message..."
+            className="flex-1 p-2 border rounded"
+          />
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileSelect}
+            className="hidden"
           />
           <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="p-2 text-gray-500 hover:text-gray-700"
+          >
+            <PaperClipIcon className="w-5 h-5" />
+          </button>
+          <button
             type="submit"
-            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
           >
             Send
           </button>
         </div>
+        {selectedFile && (
+          <div className="mt-2 text-sm text-gray-500">
+            Selected file: {selectedFile.name}
+          </div>
+        )}
       </form>
     </div>
   );

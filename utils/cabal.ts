@@ -54,14 +54,14 @@ export async function castVote(
   proposalId: string,
   voterAddress: string,
   vote: 'for' | 'against',
-  votingPower: number
+  votingPower: number = 1
 ) {
   const { error } = await supabase.from('votes').insert([
     {
-      proposal_id: proposalId,
-      voter_address: voterAddress,
+      proposalId,
+      voterAddress,
       vote,
-      voting_power: votingPower,
+      votingPower,
     },
   ]);
 
@@ -70,15 +70,23 @@ export async function castVote(
     throw error;
   }
 
-  // Update proposal vote counts
-  const voteIncrement = vote === 'for' ? votingPower : 0;
-  const againstIncrement = vote === 'against' ? votingPower : 0;
+  // First get current vote counts
+  const { data: proposal } = await supabase
+    .from('proposals')
+    .select('votes_for, votes_against')
+    .eq('id', proposalId)
+    .single();
+
+  if (!proposal) return;
+
+  const newVotesFor = proposal.votes_for + (vote === 'for' ? votingPower : 0);
+  const newVotesAgainst = proposal.votes_against + (vote === 'against' ? votingPower : 0);
 
   await supabase
     .from('proposals')
     .update({
-      votes_for: supabase.raw(`votes_for + ${voteIncrement}`),
-      votes_against: supabase.raw(`votes_against + ${againstIncrement}`),
+      votes_for: newVotesFor,
+      votes_against: newVotesAgainst,
     })
     .eq('id', proposalId);
 }
