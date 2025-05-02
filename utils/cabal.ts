@@ -79,14 +79,15 @@ export async function castVote(
 
   if (!proposal) return;
 
-  const newVotesFor = proposal.votes_for + (vote === 'for' ? votingPower : 0);
-  const newVotesAgainst = proposal.votes_against + (vote === 'against' ? votingPower : 0);
+  const voteIncrement = vote === 'for' ? votingPower : 0;
+  const againstIncrement = vote === 'against' ? votingPower : 0;
 
+  // Update with new vote counts
   await supabase
     .from('proposals')
     .update({
-      votes_for: newVotesFor,
-      votes_against: newVotesAgainst,
+      votes_for: proposal.votes_for + voteIncrement,
+      votes_against: proposal.votes_against + againstIncrement
     })
     .eq('id', proposalId);
 }
