@@ -2,27 +2,59 @@ import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!;
 
-export type ChatMessage = {
-  id: string;
-  content: string;
-  sender_address: string;
-  room: string;
-  created_at: string;
-  parent_id?: string;
-  reactions?: MessageReaction[];
-  attachments?: MessageAttachment[];
-};
-
-export type MessageReaction = {
+export interface MessageReaction {
   id: string;
   message_id: string;
   user_address: string;
   emoji: string;
   created_at: string;
-};
+}
 
-export type MessageAttachment = {
+export interface UserProfile {
+  id: string;
+  user_address: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  status: 'online' | 'offline';
+  last_seen: string;
+  created_at: string;
+}
+
+export interface ReadReceipt {
+  id: string;
+  message_id: string;
+  user_address: string;
+  read_at: string;
+  created_at: string;
+}
+
+export interface TypingIndicator {
+  id: string;
+  user_address: string;
+  room: string;
+  last_typed: string;
+  created_at: string;
+}
+
+export interface ChatMessage {
+  id: string;
+  content: string;
+  sender_address: string;
+  room: string;
+  created_at: string;
+  edited_at?: string;
+  edited_by?: string;
+  thread_id?: string;
+  reply_count: number;
+  attachments?: MessageAttachment[];
+  reactions?: MessageReaction[];
+  read_receipts?: ReadReceipt[];
+  user_profile?: UserProfile;
+}
+
+export interface MessageAttachment {
   id: string;
   message_id: string;
   type: 'image' | 'file';
@@ -30,7 +62,7 @@ export type MessageAttachment = {
   filename: string;
   size: number;
   created_at: string;
-};
+}
 
 export type Proposal = {
   id: string;

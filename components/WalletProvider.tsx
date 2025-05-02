@@ -11,8 +11,8 @@ interface Props {
 }
 
 export const ClientWalletProvider: FC<Props> = ({ children }) => {
-  const network = WalletAdapterNetwork.Mainnet;
-  const endpoint = useMemo(() => process.env.NEXT_PUBLIC_SOLANA_RPC_URL || clusterApiUrl(network), [network]);
+  const network = WalletAdapterNetwork.Devnet; // Use devnet for testing
+  const endpoint = useMemo(() => 'https://api.devnet.solana.com', []);
   const wallets = useMemo(() => [new PhantomWalletAdapter()], []);
 
   return (

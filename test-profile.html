@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Profile API</title>
+    <style>
+        body { font-family: Arial; max-width: 800px; margin: 20px auto; padding: 20px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; }
+        input, select { width: 100%; padding: 8px; margin-bottom: 10px; }
+        button { padding: 10px; margin: 5px; cursor: pointer; }
+        pre { background: #f5f5f5; padding: 10px; border-radius: 4px; white-space: pre-wrap; }
+        .error { color: red; }
+        .success { color: green; }
+    </style>
+</head>
+<body>
+    <h2>Test Profile API</h2>
+    
+    <div class="form-group">
+        <label>Display Name:</label>
+        <input type="text" id="displayName" placeholder="Enter display name">
+    </div>
+
+    <div class="form-group">
+        <label>Avatar URL:</label>
+        <input type="text" id="avatarUrl" placeholder="http://... or /...">
+    </div>
+
+    <div class="form-group">
+        <label>Status:</label>
+        <select id="status">
+            <option value="online">Online</option>
+            <option value="busy">Busy</option>
+            <option value="away">Away</option>
+            <option value="offline">Offline</option>
+            <option value="invalid">Invalid Status (for testing)</option>
+        </select>
+    </div>
+
+    <button onclick="updateProfile()">Update Profile</button>
+    <button onclick="getProfile()">Get Profile</button>
+    <button onclick="testInvalidInputs()">Test Invalid Inputs</button>
+
+    <h3>Response:</h3>
+    <pre id="response">Click a button to test the API</pre>
+
+    <script>
+        const address = '9qnKguL5uUp8PbrXDcSUWbJ1gbTkGh3URyLtx66Ya7Lx';
+        
+        async function updateProfile() {
+            try {
+                const body = {
+                    display_name: document.getElementById('displayName').value,
+                    avatar_url: document.getElementById('avatarUrl').value,
+                    status: document.getElementById('status').value
+                };
+
+                // Remove empty fields
+                Object.keys(body).forEach(key => {
+                    if (!body[key]) delete body[key];
+                });
+
+                const response = await fetch(`http://localhost:3000/api/profile?address=${address}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(body)
+                });
+                const data = await response.json();
+                document.getElementById('response').textContent = JSON.stringify(data, null, 2);
+                document.getElementById('response').className = response.ok ? 'success' : 'error';
+            } catch (error) {
+                document.getElementById('response').textContent = 'Error: ' + error.message;
+                document.getElementById('response').className = 'error';
+            }
+        }
+
+        async function getProfile() {
+            try {
+                const response = await fetch(`http://localhost:3000/api/profile?address=${address}`);
+                const data = await response.json();
+                document.getElementById('response').textContent = JSON.stringify(data, null, 2);
+                document.getElementById('response').className = response.ok ? 'success' : 'error';
+
+                if (response.ok && data) {
+                    document.getElementById('displayName').value = data.display_name || '';
+                    document.getElementById('avatarUrl').value = data.avatar_url || '';
+                    document.getElementById('status').value = data.status || 'online';
+                }
+            } catch (error) {
+                document.getElementById('response').textContent = 'Error: ' + error.message;
+                document.getElementById('response').className = 'error';
+            }
+        }
+
+        async function testInvalidInputs() {
+            const tests = [
+                { display_name: 'a' },  // Too short
+                { display_name: 'Test', avatar_url: 'invalid-url' },  // Invalid URL
+                { display_name: 'Test', status: 'invalid' }  // Invalid status
+            ];
+
+            for (const test of tests) {
+                try {
+                    const response = await fetch(`http://localhost:3000/api/profile?address=${address}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(test)
+                    });
+                    const data = await response.json();
+                    document.getElementById('response').textContent = 
+                        `Test: ${JSON.stringify(test)}\nResponse: ${JSON.stringify(data, null, 2)}`;
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                } catch (error) {
+                    document.getElementById('response').textContent = 'Error: ' + error.message;
+                }
+            }
+        }
+
+        // Load current profile on page load
+        getProfile();
+    </script>
+</body>
+</html>

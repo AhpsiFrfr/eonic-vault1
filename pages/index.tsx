@@ -3,8 +3,11 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { useRouter } from 'next/router';
 
 const Home: React.FC = () => {
-  const { connected } = useWallet();
   const router = useRouter();
+  const { connected, publicKey } = useWallet();
+
+  // No automatic redirect on connection
+  // Let the user click the button instead
 
   return (
     <div className="min-h-screen bg-gray-100 py-6 flex flex-col justify-center sm:py-12">
