@@ -43,10 +43,21 @@ export async function filterNFTsByCollection(nfts: NFTMetadata[], collectionSymb
 export async function getPopularCollections(limit: number = 5) {
   const { data } = await supabase
     .from('nft_cache')
-    .select('symbol, count(*)')
-    .group('symbol')
-    .order('count', { ascending: false })
-    .limit(limit);
+    .select('symbol')
+    .order('last_updated', { ascending: false })
+    .limit(100);
 
-  return data || [];
+  // Count symbols manually
+  const counts = (data || []).reduce((acc: Record<string, number>, item) => {
+    acc[item.symbol] = (acc[item.symbol] || 0) + 1;
+    return acc;
+  }, {});
+
+  // Sort by count and take top N
+  const sorted = Object.entries(counts)
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, limit)
+    .map(([symbol, count]) => ({ symbol, count }));
+
+  return sorted;
 }
