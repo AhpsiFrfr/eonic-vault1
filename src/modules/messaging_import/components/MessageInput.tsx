@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { FileUpload } from './FileUpload';
+import { parseTransactionCommand, formatTransactionMessage, logTransaction } from '../../../../utils/transactionCommands';
 
 interface Props {
   onSendMessage: (content: string, attachments: File[]) => Promise<void>;
@@ -17,6 +18,7 @@ export const MessageInput: React.FC<Props> = ({
   const [message, setMessage] = useState('');
   const [attachments, setAttachments] = useState<File[]>([]);
   const [isComposing, setIsComposing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const lastTypingTime = useRef<number>(0);
   const TYPING_TIMEOUT = 3000; // 3 seconds
 
@@ -33,11 +35,34 @@ export const MessageInput: React.FC<Props> = ({
     if (!message.trim() && attachments.length === 0) return;
 
     try {
+      // Check if message is a transaction command
+      if (message.startsWith('/')) {
+        const transaction = parseTransactionCommand(message);
+        if (transaction) {
+          // Log the transaction
+          const log = logTransaction(transaction);
+          
+          // Send formatted message
+          const formattedMessage = formatTransactionMessage(transaction);
+          await onSendMessage(formattedMessage, []);
+          
+          setMessage('');
+          setError(null);
+          return;
+        } else {
+          setError('Invalid transaction command format. Example: /trade 0.5 SOL to @john for testing');
+          return;
+        }
+      }
+
+      // Regular message
       await onSendMessage(message, attachments);
       setMessage('');
       setAttachments([]);
+      setError(null);
     } catch (error) {
       console.error('Failed to send message:', error);
+      setError('Failed to send message. Please try again.');
     }
   };
 
@@ -65,6 +90,12 @@ export const MessageInput: React.FC<Props> = ({
   return (
     <form onSubmit={handleSubmit} className="p-4 bg-white border-t">
       <div className="space-y-4">
+        {error && (
+          <div className="text-red-500 text-sm bg-red-50 p-2 rounded">
+            {error}
+          </div>
+        )}
+        
         {attachments.length > 0 && (
           <div className="flex flex-wrap gap-2">
             {attachments.map((file, index) => (
@@ -89,6 +120,8 @@ export const MessageInput: React.FC<Props> = ({
               onChange={(e) => {
                 setMessage(e.target.value);
                 handleTyping();
+                // Clear error when user starts typing
+                if (error) setError(null);
               }}
               onKeyDown={handleKeyDown}
               onPaste={handlePaste}

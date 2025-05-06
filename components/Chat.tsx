@@ -4,10 +4,13 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { startPresenceHeartbeat } from '../utils/presence';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { supabase } from '../utils/supabase';
-import { ChatMessage, DirectMessage, MessageAttachment, getMessages, sendMessage, subscribeToDirectMessages, subscribeToMessages, toggleReaction } from '../utils/supabase';
+import { ChatMessage, DirectMessage, MessageAttachment, getMessages, sendMessage, deleteMessage, subscribeToDirectMessages, subscribeToMessages, toggleReaction } from '../utils/supabase';
 import { EmojiPicker } from './EmojiPicker';
 import { FileUpload } from './FileUpload';
 import { MessageContextMenu } from './MessageContextMenu';
+import { useEnicBot } from '../hooks/useEnicBot';
+import type { ChatMessage as TypesChatMessage } from '../utils/types';
+import type { ChatMessage as SupabaseChatMessage } from '../utils/supabase';
 
 // Using the imported DirectMessage interface
 
@@ -27,6 +30,8 @@ export default function Chat({ room = 'general', parentId, isDM, recipientAddres
   const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; message: ChatMessage } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { generateReply, getSuggestions, isProcessing } = useEnicBot();
+  const [suggestedReplies, setSuggestedReplies] = useState<string[]>([]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -134,6 +139,58 @@ export default function Chat({ room = 'general', parentId, isDM, recipientAddres
     };
   }, [loadMessages, room, isDM, publicKey, recipientAddress, parentId]);
 
+  useEffect(() => {
+    const handleNewMessage = async (message: SupabaseChatMessage) => {
+      // Only process messages from other users
+      if (message.sender_address === publicKey?.toString() || 
+          message.sender_address === 'ENIC_BOT') {
+        return;
+      }
+
+      // Convert Supabase message format to Types format
+      const typedMessage: TypesChatMessage = {
+        ...message,
+        reactions: message.reactions?.reduce((acc, reaction) => {
+          const { emoji, sender_address } = reaction;
+          if (!acc[emoji]) acc[emoji] = [];
+          acc[emoji].push(sender_address);
+          return acc;
+        }, {} as Record<string, string[]>),
+        attachments: message.attachments?.map(attachment => ({
+          ...attachment,
+          type: attachment.type.startsWith('image/') ? 'image' : 'file',
+          created_at: new Date().toISOString()
+        }))
+      };
+
+      const response = await generateReply(typedMessage);
+      if (response?.suggestions) {
+        setSuggestedReplies(response.suggestions);
+      }
+    };
+
+    // Subscribe to new messages
+    const channel = supabase
+      .channel('new_message')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          filter: `room=eq.${room}`,
+        },
+        (payload) => {
+          handleNewMessage(payload.new as SupabaseChatMessage);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      channel.unsubscribe();
+    };
+  }, [room, publicKey, generateReply]);
+
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if ((!newMessage.trim() && attachments.length === 0) || !publicKey) return;
@@ -191,64 +248,147 @@ export default function Chat({ room = 'general', parentId, isDM, recipientAddres
     setAttachments(Array.from(files));
   };
 
-  const renderAttachment = (attachment: MessageAttachment) => {
-    if (attachment.type.startsWith('image/')) {
-      return (
-        <img
-          src={attachment.url}
-          alt={attachment.filename}
-          className="max-w-sm rounded-lg shadow-md"
-        />
+  const handleSuggestedReply = async (suggestion: string) => {
+    if (!publicKey) return;
+    
+    try {
+      const { data: message, error } = await sendMessage(
+        suggestion,
+        publicKey.toString(),
+        room,
+        parentId || undefined,
+        []
       );
+      
+      if (error) throw error;
+      
+      if (message) {
+        setMessages(prev => [...prev, message]);
+        setSuggestedReplies([]); // Clear suggestions after use
+      }
+    } catch (error) {
+      console.error('Error sending suggested reply:', error);
     }
-    return (
-      <a
-        href={attachment.url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="flex items-center space-x-2 text-blue-500 hover:text-blue-600"
-      >
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-        </svg>
-        <span>{attachment.filename}</span>
-        <span className="text-sm text-gray-500">({Math.round(attachment.size / 1024)}KB)</span>
-      </a>
-    );
   };
 
-  const handleContextMenu = (e: React.MouseEvent, message: ChatMessage) => {
-    e.preventDefault();
-    setContextMenu({
-      x: e.clientX,
-      y: e.clientY,
-      message
-    });
+  const handleGifSelect = async (gifUrl: string) => {
+    if (!publicKey) return;
+    
+    try {
+      const replyContent = `🎬 GIF Reply\n${gifUrl}`;
+      const { data: message, error } = await sendMessage(
+        replyContent,
+        publicKey.toString(),
+        room,
+        contextMenu?.message.id,
+        []
+      );
+      
+      if (error) throw error;
+      
+      if (message) {
+        setMessages(prev => [...prev, message]);
+        setContextMenu(null);
+      }
+    } catch (error) {
+      console.error('Error sending GIF reply:', error);
+    }
   };
 
-  const handleCopyText = (text: string) => {
-    navigator.clipboard.writeText(text);
+  const handleStickerSelect = async (stickerUrl: string) => {
+    if (!publicKey) return;
+    
+    try {
+      const replyContent = `🎭 Sticker\n${stickerUrl}`;
+      const { data: message, error } = await sendMessage(
+        replyContent,
+        publicKey.toString(),
+        room,
+        contextMenu?.message.id,
+        []
+      );
+      
+      if (error) throw error;
+      
+      if (message) {
+        setMessages(prev => [...prev, message]);
+        setContextMenu(null);
+      }
+    } catch (error) {
+      console.error('Error sending sticker:', error);
+    }
   };
+
+  const handleDeleteMessage = async (messageId: string) => {
+    if (!publicKey) return;
+
+    try {
+      const { error } = await deleteMessage(messageId, publicKey.toString());
+      
+      if (error) {
+        console.error('Error deleting message:', error);
+        return;
+      }
+
+      // Remove the message from the local state
+      setMessages(prev => prev.filter(msg => msg.id !== messageId));
+    } catch (error) {
+      console.error('Error deleting message:', error);
+    }
+  };
+
+  const renderMessage = (message: ChatMessage) => {
+    const isBot = message.sender_address === 'ENIC_BOT';
+    const isCurrentUser = message.sender_address === publicKey?.toString();
+    const smartActionIcon = message.smart_action && {
+      rephrase: '🔄',
+      summarize: '📝',
+      idea: '💡',
+      task: '✅',
+      translate: '🌐'
+    }[message.smart_action];
+
+    // Check if this is a transaction message
+    const isTransaction = message.content.startsWith('🧾');
 
   return (
-    <div className="h-full flex flex-col bg-gray-900 text-white relative">
-      <div className="flex-1 overflow-y-auto p-4 pb-24">
-        {messages.map((message) => (
           <div 
             key={message.id} 
-            className={`flex mb-4 ${message.sender_address === publicKey?.toString() ? 'justify-end' : 'justify-start'}`}
+        className={`flex mb-4 ${isCurrentUser ? 'justify-end' : 'justify-start'}`}
           >
             <div className="max-w-sm space-y-2">
               <div
                 onContextMenu={(e) => handleContextMenu(e, message)}
-                className={`rounded-lg p-3 ${message.sender_address === publicKey?.toString() ? 'bg-blue-500 text-white' : 'bg-white'} cursor-pointer`}
+            className={`rounded-lg p-3 ${
+              isTransaction
+                ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white'
+                : isBot 
+                  ? 'bg-gradient-to-r from-purple-500 to-indigo-500 text-white'
+                  : isCurrentUser
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-white text-gray-900'
+            } cursor-pointer`}
               >
                 <div className="flex items-center space-x-2 mb-1">
+              {isBot ? (
+                <div className="flex items-center space-x-1">
+                  <span className="text-xs font-semibold">ENIC.0</span>
+                  {smartActionIcon && (
+                    <span className="text-sm" title={message.smart_action}>
+                      {smartActionIcon}
+                    </span>
+                  )}
+                </div>
+              ) : (
                   <span className="text-xs opacity-75">
                     {message.sender_address?.slice(0, 4)}...{message.sender_address?.slice(-4)}
                   </span>
+              )}
                   <span className="text-xs opacity-75">
-                    {new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                {new Date(message.created_at).toLocaleTimeString([], { 
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })}
                   </span>
                 </div>
 
@@ -258,7 +398,9 @@ export default function Chat({ room = 'general', parentId, isDM, recipientAddres
                   </div>
                 )}
 
-                <p className="whitespace-pre-wrap break-words">{message.content}</p>
+            <p className={`whitespace-pre-wrap break-words ${
+              isTransaction ? 'font-medium' : ''
+            }`}>{message.content}</p>
 
                 {message.attachments?.map((attachment: MessageAttachment) => (
                   <div key={attachment.id} className="mt-2">
@@ -284,7 +426,6 @@ export default function Chat({ room = 'general', parentId, isDM, recipientAddres
                     )}
                   </div>
                 ))}
-              </div>
 
               {message.reactions && message.reactions.length > 0 && (
                 <div className="mt-1 flex flex-wrap gap-1">
@@ -312,9 +453,45 @@ export default function Chat({ room = 'general', parentId, isDM, recipientAddres
               )}
             </div>
           </div>
-        ))}
+      </div>
+    );
+  };
+
+  const handleContextMenu = (e: React.MouseEvent, message: ChatMessage) => {
+    e.preventDefault();
+    setContextMenu({
+      x: e.clientX,
+      y: e.clientY,
+      message
+    });
+  };
+
+  const handleCopyText = (text: string) => {
+    navigator.clipboard.writeText(text);
+  };
+
+  return (
+    <div className="h-full flex flex-col bg-gray-900 text-white relative">
+      <div className="flex-1 overflow-y-auto p-4 pb-24">
+        {messages.map(renderMessage)}
         <div ref={messagesEndRef} />
       </div>
+
+      {suggestedReplies.length > 0 && (
+        <div className="absolute bottom-20 left-0 right-0 p-2 bg-gray-800 border-t border-gray-700">
+          <div className="flex gap-2 overflow-x-auto pb-2">
+            {suggestedReplies.map((suggestion, index) => (
+              <button
+                key={index}
+                onClick={() => handleSuggestedReply(suggestion)}
+                className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded-full text-sm whitespace-nowrap"
+              >
+                {suggestion}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="absolute bottom-0 left-0 right-0 bg-gray-900 border-t border-gray-800">
         <form onSubmit={handleSendMessage} className="p-4">
@@ -373,6 +550,7 @@ export default function Chat({ room = 'general', parentId, isDM, recipientAddres
         <MessageContextMenu
           x={contextMenu.x}
           y={contextMenu.y}
+          message={contextMenu.message}
           onReply={() => {
             setReplyingTo(contextMenu.message);
             setContextMenu(null);
@@ -390,18 +568,19 @@ export default function Chat({ room = 'general', parentId, isDM, recipientAddres
             setContextMenu(null);
           }}
           onDelete={() => {
-            // TODO: Implement delete functionality
+            handleDeleteMessage(contextMenu.message.id);
             setContextMenu(null);
           }}
           onSelect={() => {
             // TODO: Implement select functionality
             setContextMenu(null);
           }}
-          onAddReaction={() => {
-            setShowEmojiPicker(true);
-            setReplyingTo(contextMenu.message);
+          onReaction={(emoji) => {
+            handleReaction(contextMenu.message.id, emoji);
             setContextMenu(null);
           }}
+          onGifSelect={handleGifSelect}
+          onStickerSelect={handleStickerSelect}
           onClose={() => setContextMenu(null)}
         />
       )}

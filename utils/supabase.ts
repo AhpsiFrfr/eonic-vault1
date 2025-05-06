@@ -1,62 +1,121 @@
-import { createClient } from '@supabase/supabase-js';
-import { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/supabase-js';
+// Mock implementation for testing purposes
+// In a production environment, this would use the actual Supabase client
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+const inMemoryProfiles = new Map<string, any>();
+const inMemoryStorage = new Map<string, any>();
 
-export const supabase = createClient(supabaseUrl, supabaseKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true
-  },
-  realtime: {
-    params: {
-      eventsPerSecond: 10
-    }
-  },
-  global: {
-    headers: {
-      'x-my-custom-header': 'eonic-vault'
-    }
-  }
-});
-
-// Channel management
-let activeChannels: { [key: string]: RealtimeChannel } = {};
-
-export const subscribeToChannel = (channelName: string, table: string, callback: (payload: any) => void) => {
-  // Reuse existing channel if available
-  if (activeChannels[channelName]) {
-    return activeChannels[channelName];
-  }
-
-  // Create new channel
-  const channel = supabase.channel(channelName)
-    .on('presence', { event: 'sync' }, () => {
-      console.log('Presence sync');
-    })
-    .on(
-      'postgres_changes',
-      { event: '*', schema: 'public', table },
-      (payload) => callback(payload)
-    )
-    .subscribe((status) => {
-      if (status === 'SUBSCRIBED') {
-        console.log(`Connected to ${channelName}`);
+// Mock client factory function
+export const createSupabaseClient = (walletAddress?: string) => {
+  console.log(`[MOCK] Creating Supabase client with wallet: ${walletAddress ? walletAddress.substring(0, 8) + '...' : 'none'}`);
+  
+  return {
+    from: (table: string) => {
+      // Mock the database methods
+      return {
+        select: (query?: string) => {
+          return {
+            eq: (column: string, value: string) => {
+              return {
+                single: async () => {
+                  console.log(`[MOCK] Getting ${table} where ${column} = ${value}`);
+                  
+                  if (table === 'user_profiles') {
+                    const profile = inMemoryProfiles.get(value);
+                    
+                    // If the profile doesn't exist yet, return an empty data result
+                    if (!profile) {
+                      return { data: null, error: null };
+                    }
+                    
+                    return { data: profile, error: null };
+                  }
+                  
+                  return { data: null, error: null };
+                }
+              };
+            }
+          };
+        },
+        upsert: (data: any) => {
+          return {
+            select: () => {
+              return {
+                single: async () => {
+                  console.log(`[MOCK] Upserting data into ${table}:`, data);
+                  
+                  if (table === 'user_profiles') {
+                    const walletAddr = data.wallet_address || '';
+                    
+                    // If the profile already exists, update it
+                    if (inMemoryProfiles.has(walletAddr)) {
+                      const existingProfile = inMemoryProfiles.get(walletAddr);
+                      const updatedProfile = { ...existingProfile, ...data };
+                      inMemoryProfiles.set(walletAddr, updatedProfile);
+                      return { data: updatedProfile, error: null };
+                    }
+                    
+                    // Otherwise create a new profile
+                    const newProfile = {
+                      id: `mock-${Date.now()}`,
+                      ...data
+                    };
+                    
+                    inMemoryProfiles.set(walletAddr, newProfile);
+                    return { data: newProfile, error: null };
+                  }
+                  
+                  return { data: null, error: null };
+                }
+              };
+            }
+          };
+        }
+      };
+    },
+    storage: {
+      from: (bucket: string) => {
+        return {
+          upload: async (path: string, file: any) => {
+            console.log(`[MOCK] Uploading file to ${bucket}/${path}`);
+            
+            // Store a reference to the file
+            const key = `${bucket}/${path}`;
+            inMemoryStorage.set(key, file);
+            
+            return { data: { path }, error: null };
+          },
+          getPublicUrl: (path: string) => {
+            // Generate a fake public URL
+            const publicUrl = `/mock-storage/${bucket}/${path}`;
+            console.log(`[MOCK] Getting public URL for ${bucket}/${path}: ${publicUrl}`);
+            
+            return { data: { publicUrl } };
+          }
+        };
       }
-    });
-
-  activeChannels[channelName] = channel;
-  return channel;
+    }
+  };
 };
 
-export const unsubscribeFromChannel = (channelName: string) => {
-  const channel = activeChannels[channelName];
-  if (channel) {
-    channel.unsubscribe();
-    delete activeChannels[channelName];
-  }
-};
+// Default client for convenience
+export const supabase = createSupabaseClient();
+
+// Additional utility mock functions
+
+export function subscribeToChannel(channelName: string, table: string, callback: (payload: any) => void) {
+  console.log(`[MOCK] Subscribing to channel ${channelName} for table ${table}`);
+  return {
+    unsubscribe: () => {
+      console.log(`[MOCK] Unsubscribing from channel ${channelName}`);
+    }
+  };
+}
+
+export function unsubscribeFromChannel(channelName: string) {
+  console.log(`[MOCK] Unsubscribing from channel ${channelName}`);
+}
+
+// Interfaces for type checking
 
 export interface MessageAttachment {
   id: string;
@@ -88,14 +147,17 @@ export interface DirectMessage {
 
 export interface ChatMessage {
   id: string;
-  created_at: string;
   content: string;
   sender_address: string;
   room: string;
   parent_id?: string;
-  thread_count: number;
-  attachments?: MessageAttachment[];
+  created_at: string;
+  edited_at?: string;
+  thread_id?: string;
+  reply_count?: number;
   reactions?: MessageReaction[];
+  attachments?: MessageAttachment[];
+  smart_action?: 'rephrase' | 'summarize' | 'idea' | 'task' | 'translate';
 }
 
 export async function sendMessage(
@@ -105,12 +167,20 @@ export async function sendMessage(
   parentId?: string,
   attachments?: File[]
 ) {
+  if (!content.trim() && (!attachments || attachments.length === 0)) {
+    return { error: new Error('Message content cannot be empty') };
+  }
+
+  if (!senderAddress) {
+    return { error: new Error('Sender address is required') };
+  }
+
   try {
     // First insert the message
     const { data: message, error: messageError } = await supabase
       .from('messages')
       .insert([{ 
-        content, 
+        content: content.trim(), 
         sender_address: senderAddress, 
         room,
         parent_id: parentId
@@ -122,12 +192,19 @@ export async function sendMessage(
       `)
       .single();
 
-    if (messageError) throw messageError;
-    if (!message) throw new Error('Failed to create message');
+    if (messageError) {
+      console.error('Error creating message:', messageError);
+      throw messageError;
+    }
+    if (!message) {
+      console.error('No message returned after creation');
+      throw new Error('Failed to create message');
+    }
 
     // Then handle attachments if any
     if (attachments?.length) {
       const attachmentPromises = attachments.map(async (file) => {
+        try {
         // Upload file to storage
         const { data: fileData, error: uploadError } = await supabase.storage
           .from('attachments')
@@ -152,9 +229,18 @@ export async function sendMessage(
           }]);
 
         if (attachError) throw attachError;
+        } catch (error) {
+          console.error(`Error handling attachment ${file.name}:`, error);
+          throw error;
+        }
       });
 
+      try {
       await Promise.all(attachmentPromises);
+      } catch (error) {
+        console.error('Error handling attachments:', error);
+        throw error;
+      }
     }
 
     // Fetch the complete message with attachments and reactions
@@ -168,11 +254,18 @@ export async function sendMessage(
       .eq('id', message.id)
       .single();
 
-    if (fetchError) throw fetchError;
-    if (!completeMessage) throw new Error('Failed to fetch complete message');
+    if (fetchError) {
+      console.error('Error fetching complete message:', fetchError);
+      throw fetchError;
+    }
+    if (!completeMessage) {
+      console.error('No complete message found');
+      throw new Error('Failed to fetch complete message');
+    }
 
     return { data: completeMessage };
   } catch (error) {
+    console.error('Error in sendMessage:', error);
     return { error };
   }
 }
@@ -395,6 +488,48 @@ export async function toggleReaction(
 
     return reactions as MessageReaction[] || [];
   } catch (error) {
+    return { error };
+  }
+}
+
+export async function deleteMessage(messageId: string, senderAddress: string) {
+  if (!messageId || !senderAddress) {
+    return { error: new Error('Message ID and sender address are required') };
+  }
+
+  try {
+    // First check if the user owns the message
+    const { data: message, error: fetchError } = await supabase
+      .from('messages')
+      .select('*')
+      .eq('id', messageId)
+      .eq('sender_address', senderAddress)
+      .single();
+
+    if (fetchError) {
+      console.error('Error fetching message:', fetchError);
+      throw fetchError;
+    }
+
+    if (!message) {
+      return { error: new Error('Message not found or you do not have permission to delete it') };
+    }
+
+    // Delete the message
+    const { error: deleteError } = await supabase
+      .from('messages')
+      .delete()
+      .eq('id', messageId)
+      .eq('sender_address', senderAddress);
+
+    if (deleteError) {
+      console.error('Error deleting message:', deleteError);
+      throw deleteError;
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error in deleteMessage:', error);
     return { error };
   }
 }

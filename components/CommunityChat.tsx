@@ -1,12 +1,18 @@
 import { useEffect, useState, useRef } from "react";
-import { supabase, subscribeToChannel, unsubscribeFromChannel } from "../utils/supabase";
-import { Smile, Edit3, Trash2, Pin, CornerDownRight } from "lucide-react";
+import { Smile, Edit3, Trash2, Pin, CornerDownRight, Image, Users } from "lucide-react";
+import { motion, AnimatePresence } from 'framer-motion';
+import { MessageBubble } from "./MessageBubble";
+import { MembersPanel } from "./MembersPanel";
+import { v4 as uuidv4 } from 'uuid';
+import { getMockProfile } from "../utils/mock-data";
 
+// Mock data structure
 interface CommunityMessage {
   id: string;
   content: string;
   sender_address: string;
   room: string;
+  channel: string;
   created_at: string;
   edited_at?: string;
   reply_to?: string;
@@ -19,124 +25,213 @@ interface CommunityMessage {
   }>;
   parent_id?: string;
   thread_count: number;
+  showBusinessCard?: boolean;
+  businessCard?: {
+    ensName?: string;
+    role?: string;
+    timepieceStage?: string;
+    lookingFor?: string;
+    links?: {
+      github?: string;
+      website?: string;
+      twitter?: string;
+    };
+  };
 }
 
 interface Props {
   userWalletAddress: string;
   roomId: string;
+  channel: string;
+  viewMode?: 'web' | 'mobile';
 }
 
-export default function CommunityChat({ userWalletAddress, roomId }: Props): JSX.Element {
+type ViewMode = 'web' | 'mobile';
+
+// Generate mock data based on the room
+const generateMockMessages = (room: string, channel: string): CommunityMessage[] => {
+  const now = new Date();
+  const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+  const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000);
+  
+  // Different content for different rooms
+  const mockContent: Record<string, string[]> = {
+    community: [
+      "Welcome to the EONIC community!",
+      "Has anyone seen the new features in the vault?",
+      "The timepiece NFTs look amazing!",
+      "I'm excited about the upcoming features."
+    ],
+    lounge: [
+      "Holders only! This is the exclusive lounge.",
+      "What are your thoughts on the latest EON token performance?",
+      "I love the new benefits for holders.",
+      "Anyone planning to increase their holdings?"
+    ],
+    cabal: [
+      "Top secret Cabal discussion here.",
+      "NFT + token holders unite!",
+      "When is the next exclusive event?",
+      "The Cabal grows stronger every day."
+    ],
+    board: [
+      "Team update: New roadmap coming next week.",
+      "Development progress is on track.",
+      "Marketing campaign starting soon.",
+      "Admin discussion for upcoming changes."
+    ]
+  };
+  
+  // Default to community chat content if room not found
+  const content = mockContent[room] || mockContent.community;
+  
+  // Generate mock messages
+  return [
+    {
+      id: uuidv4(),
+      content: content[0],
+      sender_address: "0x1234...5678", // Mock admin address
+      room,
+      channel,
+      created_at: twoHoursAgo.toISOString(),
+      reactions: ["👍", "❤️"],
+      pinned: true,
+      attachments: [],
+      thread_count: 0,
+      showBusinessCard: true,
+      businessCard: {
+        ensName: "EONIC.Admin",
+        role: "Admin",
+        timepieceStage: "Genesis",
+        lookingFor: "Community Growth",
+        links: {
+          website: "https://eonic.com"
+        }
+      }
+    },
+    {
+      id: uuidv4(),
+      content: content[1],
+      sender_address: "0xabcd...efgh", 
+      room,
+      channel,
+      created_at: oneHourAgo.toISOString(),
+      reactions: ["🔥"],
+      pinned: false,
+      attachments: [],
+      thread_count: 0
+    },
+    {
+      id: uuidv4(),
+      content: content[2],
+      sender_address: "0x7890...1234",
+      room,
+      channel,
+      created_at: new Date(now.getTime() - 30 * 60 * 1000).toISOString(),
+      reactions: [],
+      pinned: false,
+      attachments: [],
+      thread_count: 0
+    },
+    {
+      id: uuidv4(),
+      content: content[3],
+      sender_address: "0xijkl...mnop",
+      room,
+      channel,
+      created_at: new Date(now.getTime() - 15 * 60 * 1000).toISOString(),
+      reactions: ["👀"],
+      pinned: false,
+      attachments: [],
+      thread_count: 0
+    }
+  ];
+};
+
+// Mock user data
+const mockOnlineUsers = [
+  { wallet_address: "0x1234...5678", display_name: "EONIC.Admin", avatar_url: "/default-avatar.png" },
+  { wallet_address: "0xabcd...efgh", display_name: "TokenHolder1", avatar_url: "/default-avatar.png" },
+  { wallet_address: "0x7890...1234", display_name: "NFTCollector", avatar_url: "/default-avatar.png" }
+];
+
+const mockCommunityUsers = [
+  { id: "1", username: "EONIC.Admin", display_name: "EONIC.Admin", wallet_address: "0x1234...5678", last_seen: new Date().toISOString(), avatar_url: "/default-avatar.png" },
+  { id: "2", username: "TokenHolder1", display_name: "TokenHolder1", wallet_address: "0xabcd...efgh", last_seen: new Date().toISOString(), avatar_url: "/default-avatar.png" },
+  { id: "3", username: "NFTCollector", display_name: "NFTCollector", wallet_address: "0x7890...1234", last_seen: new Date().toISOString(), avatar_url: "/default-avatar.png" },
+  { id: "4", username: "CommunityMember", display_name: "CommunityMember", wallet_address: "0xijkl...mnop", last_seen: new Date().toISOString(), avatar_url: "/default-avatar.png" }
+];
+
+export default function CommunityChat({ userWalletAddress, roomId, channel, viewMode = 'web' }: Props): JSX.Element {
   const [messages, setMessages] = useState<CommunityMessage[]>([]);
   const [pinnedMsg, setPinnedMsg] = useState<CommunityMessage | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState("");
-  const [currentRoom] = useState(roomId);
-  const [onlineUsers, setOnlineUsers] = useState<Array<{ wallet_address: string }>>([]);
   const [hoveredMessage, setHoveredMessage] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [replyTo, setReplyTo] = useState<string | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState<string | null>(null);
+  const [showGifPicker, setShowGifPicker] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showMembersPanel, setShowMembersPanel] = useState(false);
+  
+  // Load mock messages
+  useEffect(() => {
+    setIsLoading(true);
+    
+    // Simulate loading delay
+    const timer = setTimeout(() => {
+      try {
+        const mockMessages = generateMockMessages(roomId, channel);
+        setMessages(mockMessages);
+        
+        // Find pinned message
+        const pinned = mockMessages.find(m => m.pinned);
+        setPinnedMsg(pinned || null);
+        
+        setIsLoading(false);
+      } catch (error) {
+        console.error("Error loading mock messages:", error);
+        setError("Failed to load messages. Please try again.");
+        setIsLoading(false);
+      }
+    }, 1000);
+    
+    return () => clearTimeout(timer);
+  }, [roomId, channel]);
 
   // Scroll to bottom when new messages arrive
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Load existing messages and setup realtime subscription
-  useEffect(() => {
-    const loadMessages = async () => {
-      setIsLoading(true);
-      setError(null);
-      
-      try {
-        const { data, error } = await supabase
-          .from("community_messages")
-          .select("*")
-          .eq("room", currentRoom)
-          .order("created_at", { ascending: true });
-
-        if (error) {
-          console.error("Error loading messages:", error);
-          setError(error.message);
-          return;
-        }
-
-        // Find pinned message
-        const pinned = data?.find(m => m.pinned);
-        setPinnedMsg(pinned || null);
-        setMessages(data || []);
-      } catch (error) {
-        console.error("Error loading messages:", error);
-        setError(error instanceof Error ? error.message : 'An error occurred');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadMessages();
-
-    // Subscribe to realtime changes
-    const channel = supabase
-      .channel("public:community_messages")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "community_messages",
-          filter: `room=eq.${currentRoom}`,
-        },
-        (payload) => {
-          console.log("Received realtime update:", payload);
-          if (payload.eventType === "INSERT") {
-            setMessages((prev) => [...prev, payload.new as CommunityMessage]);
-          } else if (payload.eventType === "DELETE") {
-            setMessages((prev) => 
-              prev.filter((msg) => msg.id !== payload.old.id)
-            );
-          } else if (payload.eventType === "UPDATE") {
-            setMessages((prev) =>
-              prev.map((msg) =>
-                msg.id === payload.new.id ? payload.new as CommunityMessage : msg
-              )
-            );
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      channel.unsubscribe();
-    };
-  }, [currentRoom]);
-
   const handleDeleteMessage = async (messageId: string) => {
-    if (deleteConfirm !== messageId) {
-      setDeleteConfirm(messageId);
+    // Only allow deleting messages sent by the current user
+    const msgToDelete = messages.find(m => m.id === messageId);
+    if (!msgToDelete) {
+      setError('Message not found');
       return;
     }
 
-    try {
-      const { error } = await supabase
-        .from("community_messages")
-        .delete()
-        .match({ id: messageId, sender_address: userWalletAddress });
-
-      if (error) {
-        console.error('Error deleting message:', error);
-        return;
-      }
-
-      setMessages(prev => prev.filter(msg => msg.id !== messageId));
-      setDeleteConfirm(null);
-    } catch (error) {
-      console.error('Error deleting message:', error);
+    if (msgToDelete.sender_address !== userWalletAddress) {
+      setError('You can only delete your own messages');
+      return;
     }
+
+    // Update local state by removing the message
+    setMessages(prev => prev.filter(msg => msg.id !== messageId));
+    setDeleteConfirm(null);
+  };
+
+  const handleEditMessage = (messageId: string) => {
+    const msg = messages.find(m => m.id === messageId);
+    if (!msg) return;
+    
+    setEditing(messageId);
+    setMessage(msg.content);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -146,38 +241,48 @@ export default function CommunityChat({ userWalletAddress, roomId }: Props): JSX
 
     try {
       if (editing) {
-        const { error } = await supabase
-          .from("community_messages")
-          .update({ content: message })
-          .match({ id: editing, sender_address: userWalletAddress });
-
-        if (error) throw error;
+        // Edit existing message
+        const editMsg = messages.find(m => m.id === editing);
+        if (!editMsg) {
+          setEditing(null);
+          return;
+        }
+        
+        // Update the message locally
+        setMessages(prev => 
+          prev.map(msg => 
+            msg.id === editing 
+              ? { ...msg, content: message, edited_at: new Date().toISOString() } 
+              : msg
+          )
+        );
+        
         setEditing(null);
       } else {
-        const { error } = await supabase
-          .from("community_messages")
-          .insert([
-            {
-              content: message,
-              sender_address: userWalletAddress,
-              room_id: currentRoom,
-              created_at: new Date().toISOString(),
-              edited_at: null,
-              reply_to: replyTo,
-              reactions: [],
-              pinned: false,
-              attachments: [],
-              thread_count: 0,
-            },
-          ]);
-
-        if (error) throw error;
-        setReplyTo(null);
+        // Create new message
+        const newMessage: CommunityMessage = {
+          id: uuidv4(),
+          content: message,
+          sender_address: userWalletAddress,
+          room: roomId,
+          channel: channel || 'community-chat',
+          created_at: new Date().toISOString(),
+          reactions: [],
+          pinned: false,
+          attachments: [],
+          thread_count: 0
+        };
+        
+        // Add to local state
+        setMessages(prev => [...prev, newMessage]);
       }
-
+      
+      // Clear input
       setMessage("");
+      setReplyTo(null);
     } catch (error) {
       console.error("Error with message:", error);
+      setError("Failed to send message");
     }
   };
 
@@ -188,436 +293,237 @@ export default function CommunityChat({ userWalletAddress, roomId }: Props): JSX
     const newReactions = msg.reactions.includes(emoji)
       ? msg.reactions.filter((e) => e !== emoji)
       : [...msg.reactions, emoji];
-
-    try {
-      await supabase
-        .from("community_messages")
-        .update({ reactions: newReactions })
-        .match({ id: messageId });
-    } catch (error) {
-      console.error("Error updating reactions:", error);
-    }
+    
+    // Update local state
+    setMessages(prev =>
+      prev.map(m => m.id === messageId ? { ...m, reactions: newReactions } : m)
+    );
   };
 
   const handlePin = async (messageId: string) => {
     const msg = messages.find((m) => m.id === messageId);
     if (!msg) return;
 
-    try {
-      // If we're pinning this message, unpin any existing pinned message
-      if (!msg.pinned) {
-        await supabase
-          .from("community_messages")
-          .update({ pinned: false })
-          .eq("room", currentRoom)
-          .eq("pinned", true);
-      }
-
-      // Pin/unpin the selected message
-      const { error } = await supabase
-        .from("community_messages")
-        .update({ pinned: !msg.pinned })
-        .match({ id: messageId });
-
-      if (error) {
-        console.error("Error pinning message:", error);
-        return;
-      }
-
-      // Update local state
-      if (!msg.pinned) {
-        setPinnedMsg({ ...msg, pinned: true });
-      } else {
-        setPinnedMsg(null);
-      }
-
-      // Update the message in the list
+    // If pinning this message, unpin any currently pinned message
+    if (!msg.pinned) {
       setMessages(prev =>
-        prev.map(m => m.id === messageId ? { ...m, pinned: !m.pinned } : m)
+        prev.map(m => m.pinned ? { ...m, pinned: false } : m)
       );
-    } catch (error) {
-      console.error("Error pinning message:", error);
+    }
+    
+    // Toggle pin state for the selected message
+    setMessages(prev =>
+      prev.map(m => m.id === messageId ? { ...m, pinned: !m.pinned } : m)
+    );
+    
+    // Update pinned message reference
+    if (!msg.pinned) {
+      setPinnedMsg({ ...msg, pinned: true });
+    } else {
+      setPinnedMsg(null);
     }
   };
-
-  const handleFileUpload = async (file: File) => {
-    if (!file) return;
-
-    try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Math.random().toString(36).substring(7)}.${fileExt}`;
-      const filePath = `${userWalletAddress}/${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('attachments')
-        .upload(filePath, file);
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('attachments')
-        .getPublicUrl(filePath);
-
-      await supabase.from("community_messages").insert([
-        {
-          content: message || '📎 Attachment',
-          sender_address: userWalletAddress,
-          room_id: currentRoom,
-          attachments: [{
-            url: publicUrl,
-            type: file.type,
-            filename: file.name
-          }]
-        },
-      ]);
-
-      setMessage("");
-    } catch (error) {
-      console.error("Error uploading file:", error);
-    }
-  };
-
-  // Load online users
-  useEffect(() => {
-    const loadOnlineUsers = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('online_users')
-          .select('wallet_address')
-          .eq('room_id', currentRoom)
-          .gte('last_seen', new Date(Date.now() - 5 * 60 * 1000).toISOString());
-
-        if (error) {
-          console.error('Error loading online users:', error);
-          return;
-        }
-
-        setOnlineUsers(data || []);
-      } catch (error) {
-        console.error('Error loading online users:', error);
-      }
-    };
-
-    loadOnlineUsers();
-    const interval = setInterval(loadOnlineUsers, 30000);
-
-    return () => clearInterval(interval);
-  }, [currentRoom]);
-
-  // Update presence
-  useEffect(() => {
-    const updatePresence = async () => {
-      try {
-        await supabase
-          .from('online_users')
-          .upsert({
-            wallet_address: userWalletAddress,
-            room: currentRoom,
-            last_seen: new Date().toISOString()
-          }, {
-            onConflict: 'wallet_address',
-            ignoreDuplicates: false
-          });
-      } catch (error) {
-        console.error('Error updating presence:', error);
-      }
-    };
-
-    updatePresence();
-    const interval = setInterval(updatePresence, 30000);
-
-    return () => clearInterval(interval);
-  }, [userWalletAddress, currentRoom]);
 
   return (
-    <div className="flex flex-col h-full bg-gray-900 relative">
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 relative">
-        {pinnedMsg && (
-          <div className="absolute top-0 left-0 right-0 bg-indigo-900/90 backdrop-blur-sm text-indigo-200 px-6 py-3 border-b-2 border-indigo-500/50 shadow-lg z-40 flex items-center justify-between">
-            <div className="flex items-center space-x-3 flex-1 min-w-0">
-              <Pin className="w-4 h-4 text-indigo-400 flex-shrink-0" />
-              <p className="text-sm truncate">
-                <span className="font-medium text-indigo-300">Pinned:</span>{' '}
-                {pinnedMsg.content}
-              </p>
-            </div>
-            {pinnedMsg.sender_address === userWalletAddress && (
-              <button
-                onClick={() => handlePin(pinnedMsg.id)}
-                className="ml-4 text-indigo-400 hover:text-indigo-300 transition-colors flex-shrink-0"
-              >
-                <span className="text-xs">Unpin</span>
-              </button>
-            )}
-          </div>
-        )}
-        {/* rooms.map(room => (
-          <div key={room.id} className="relative group">
-            <button
-              onClick={() => setCurrentRoom(room.id)}
-              onContextMenu={(e) => {
-                e.preventDefault();
-                // Show online users modal or tooltip
-              }}
-              className={`px-4 py-2 rounded-lg transition-colors ${currentRoom === room.id
-                ? 'bg-indigo-600 text-white'
-                : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-              }`}
-            >
-              {room.name}
-            </button>
-            <div className="absolute hidden group-hover:block bottom-full left-0 mb-2 p-2 bg-gray-800 rounded-lg shadow-lg z-50">
-              <div className="text-sm text-gray-300">
-                Online Users ({onlineUsers.length}):
-                {onlineUsers.map(user => (
-                  <div key={user.wallet_address} className="text-xs text-gray-400 mt-1">
-                    {user.wallet_address.slice(0, 8)}...
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )) */}
-      </div>
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 relative">
-        {isLoading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-gray-900/50 backdrop-blur-sm">
-            <div className="flex flex-col items-center space-y-4">
-              <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-              <p className="text-indigo-400 text-sm">Loading messages...</p>
-            </div>
-          </div>
-        )}
-        {error && (
-          <div className="bg-red-900/50 text-red-200 px-4 py-3 rounded-lg mb-4">
-            <p className="text-sm">Error: {error}</p>
-            <button 
-              onClick={() => window.location.reload()}
-              className="text-xs text-red-300 hover:text-red-200 underline mt-2"
-            >
-              Try refreshing the page
-            </button>
-          </div>
-        )}
-        {messages.map((msg) => (
-          <div
-            key={msg.id}
-            className={`flex items-start space-x-3 ${msg.sender_address === userWalletAddress ? 'justify-end' : ''} ${msg.pinned ? 'bg-gray-800/30 rounded-xl p-2' : ''}`}
-            onMouseEnter={() => setHoveredMessage(msg.id)}
-            onMouseLeave={() => {
-              setHoveredMessage(null);
-              if (deleteConfirm === msg.id) {
-                setDeleteConfirm(null);
-              }
-              setShowEmojiPicker(null);
-            }}
+    <div className={`flex flex-col h-full bg-[#0F0F1A] relative ${viewMode === 'mobile' ? 'max-w-[375px] mx-auto' : ''}`}>
+      {/* Header with members toggle */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-white/5 bg-[#1E1E2F]/30 backdrop-blur-sm">
+        <h2 className="text-lg font-medium text-white">
+          {roomId.charAt(0).toUpperCase() + roomId.slice(1)} Chat
+        </h2>
+        <div className="flex items-center space-x-3">
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setShowMembersPanel(!showMembersPanel)}
+            className={`p-2 rounded-lg transition-colors ${
+              showMembersPanel 
+                ? 'bg-indigo-500/20 text-indigo-400' 
+                : 'hover:bg-white/5 text-gray-400 hover:text-indigo-400'
+            }`}
           >
-            {msg.sender_address !== userWalletAddress && (
-              <div className="w-10 h-10 rounded-full bg-gray-800 border border-gray-700 flex items-center justify-center">
-                <span className="text-sm text-indigo-400 font-mono">
-                  {msg.sender_address.slice(0, 4)}
-                </span>
-              </div>
-            )}
-            <div className="group relative max-w-[70%]">
-              {msg.reply_to && (
-                <div className="mb-1 text-sm text-gray-400 flex items-center space-x-1">
-                  <CornerDownRight className="w-3 h-3" />
-                  <span className="italic truncate">
-                    {messages.find(m => m.id === msg.reply_to)?.content || "Message not found"}
-                  </span>
-                </div>
-              )}
-              <div
-                className={`p-3 rounded-lg ${msg.sender_address === userWalletAddress
-                  ? 'bg-indigo-600 text-white'
-                  : 'bg-gray-800 text-gray-100'
-                  } transition-all duration-200 ${hoveredMessage === msg.id ? 'shadow-lg' : ''}`}
-              >
-                <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
-
-                {msg.attachments?.map((attachment, index) => (
-                  <div key={index} className="mt-2">
-                    {attachment.type.startsWith('image/') ? (
-                      <img 
-                        src={attachment.url} 
-                        alt={attachment.filename}
-                        className="max-w-full rounded-lg"
-                      />
-                    ) : (
-                      <a 
-                        href={attachment.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-indigo-400 hover:text-indigo-300 text-sm flex items-center space-x-1"
-                      >
-                        📎 {attachment.filename}
-                      </a>
-                    )}
-                  </div>
-                ))}
-
-                <div className="flex items-center justify-between mt-2 text-xs text-gray-400">
-                  <div className="flex items-center space-x-2">
-                    <span>{new Date(msg.created_at).toLocaleTimeString()}</span>
-                    {msg.edited_at && (
-                      <span className="italic">(edited)</span>
-                    )}
-                  </div>
-
-                  {/* Reactions */}
-                  <div className="flex items-center space-x-1">
-                    {msg.reactions?.map((reaction, index) => (
-                      <button
-                        key={index}
-                        onClick={() => handleReaction(msg.id, reaction)}
-                        className="hover:scale-110 transition-transform"
-                      >
-                        {reaction}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Action buttons */}
-              {hoveredMessage === msg.id && (
-                <div className="fixed transform opacity-0 group-hover:opacity-100 flex items-center space-x-2 bg-gray-800 rounded-lg px-2 py-1 shadow-lg transition-opacity duration-200"
-                  style={{
-                    top: 'var(--menu-top, 0px)',
-                    left: 'var(--menu-left, 0px)',
-                    zIndex: 50
-                  }}
-                  ref={(el) => {
-                    if (el) {
-                      const rect = el.getBoundingClientRect();
-                      const parentRect = el.parentElement?.getBoundingClientRect();
-                      if (parentRect) {
-                        const top = parentRect.top - rect.height - 8;
-                        const left = Math.min(
-                          parentRect.left,
-                          window.innerWidth - rect.width - 16
-                        );
-                        el.style.setProperty('--menu-top', `${top}px`);
-                        el.style.setProperty('--menu-left', `${left}px`);
-                      }
-                    }
-                  }}>
-                  <button
-                    onClick={() => setShowEmojiPicker(msg.id)}
-                    className="text-gray-400 hover:text-yellow-400 transition-colors"
-                  >
-                    <Smile className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => setReplyTo(msg.id)}
-                    className="text-gray-400 hover:text-blue-400 transition-colors"
-                  >
-                    <CornerDownRight className="w-4 h-4" />
-                  </button>
-                  {msg.sender_address === userWalletAddress && (
-                    <>
-                      <button
-                        onClick={() => {
-                          setMessage(msg.content);
-                          setEditing(msg.id);
-                        }}
-                        className="text-gray-400 hover:text-green-400 transition-colors"
-                      >
-                        <Edit3 className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteMessage(msg.id)}
-                        className="text-gray-400 hover:text-red-400 transition-colors"
-                      >
-                        {deleteConfirm === msg.id ? '✓' : <Trash2 className="w-4 h-4" />}
-                      </button>
-                    </>
-                  )}
-                  <button
-                    onClick={() => handlePin(msg.id)}
-                    className={`transition-colors ${msg.pinned ? 'text-yellow-400' : 'text-gray-400 hover:text-yellow-400'}`}
-                  >
-                    <Pin className="w-4 h-4" />
-                  </button>
-                </div>
-              )}
-
-              {/* Emoji picker */}
-              {showEmojiPicker === msg.id && (
-                <div className="absolute top-0 right-0 transform -translate-y-full bg-gray-800 rounded-lg p-2 shadow-lg z-10">
-                  <div className="grid grid-cols-6 gap-1">
-                    {['👍', '❤️', '😂', '🎉', '🤔', '👀'].map((emoji) => (
-                      <button
-                        key={emoji}
-                        onClick={() => {
-                          handleReaction(msg.id, emoji);
-                          setShowEmojiPicker(null);
-                        }}
-                        className="text-xl hover:scale-110 transition-transform"
-                      >
-                        {emoji}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        ))}
-        <div ref={messagesEndRef} />
+            <Users className="w-5 h-5" />
+          </motion.button>
+        </div>
       </div>
 
-      <div className="p-4 border-t border-gray-800">
-        {replyTo && (
-          <div className="mb-2 text-sm text-indigo-400 flex items-center justify-between bg-gray-800/50 rounded-lg p-2">
-            <div className="flex items-center space-x-2">
-              <CornerDownRight className="w-4 h-4" />
-              <span className="italic truncate">
-                {messages.find(m => m.id === replyTo)?.content || "Message not found"}
-              </span>
-            </div>
-            <button
-              onClick={() => setReplyTo(null)}
-              className="text-gray-400 hover:text-red-400 transition-colors"
+      {/* Error Message Toast */}
+      <AnimatePresence>
+        {error && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="absolute top-16 left-0 right-0 mx-auto w-[90%] max-w-md bg-red-500/90 text-white p-3 rounded-lg shadow-lg z-50 flex justify-between items-center"
+          >
+            <span>{error}</span>
+            <button 
+              onClick={() => setError(null)}
+              className="ml-2 text-white hover:text-red-200"
             >
               ×
             </button>
-          </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      
+      {/* Members Panel */}
+      <MembersPanel
+        isOpen={showMembersPanel}
+        onClose={() => setShowMembersPanel(false)}
+        onlineUsers={[
+          // Current user first
+          {
+            id: userWalletAddress,
+            username: getMockProfile(userWalletAddress)?.display_name || `${userWalletAddress.slice(0, 4)}...${userWalletAddress.slice(-4)}`,
+            wallet_address: userWalletAddress,
+            last_seen: new Date().toISOString(),
+            showBusinessCard: true,
+            avatar_url: getMockProfile(userWalletAddress)?.avatar_url || "/default-avatar.png"
+          },
+          // Other online users
+          ...mockOnlineUsers
+            .filter(user => user.wallet_address !== userWalletAddress)
+            .map(user => ({
+              id: user.wallet_address,
+              username: user.display_name || `${user.wallet_address.slice(0, 4)}...${user.wallet_address.slice(-4)}`,
+              wallet_address: user.wallet_address,
+              last_seen: new Date().toISOString(),
+              avatar_url: user.avatar_url
+            }))
+        ]}
+        communityUsers={mockCommunityUsers.filter(user => 
+          !mockOnlineUsers.some(onlineUser => onlineUser.wallet_address === user.wallet_address) &&
+          user.wallet_address !== userWalletAddress
+        )}
+      />
+
+      {/* Messages Container */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {/* Pinned Message */}
+        {pinnedMsg && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-indigo-500/10 border border-indigo-500/20 rounded-lg p-3 mb-4"
+          >
+            <div className="flex items-center text-xs text-indigo-400 mb-1">
+              <Pin className="w-3 h-3 mr-1" />
+              Pinned Message
+            </div>
+            <div className="text-sm text-white">{pinnedMsg.content}</div>
+          </motion.div>
         )}
 
-        <form
-          onSubmit={handleSubmit}
-          className="flex flex-col space-y-2"
-        >
+        {/* Messages */}
+        {isLoading ? (
+          <div className="flex items-center justify-center h-full">
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+              className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full"
+            />
+          </div>
+        ) : messages.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-64 text-gray-400">
+            <p className="mb-2">No messages yet</p>
+            <p className="text-sm">Be the first to start the conversation!</p>
+          </div>
+        ) : (
+          <AnimatePresence>
+            {messages.map((msg) => (
+              <div key={msg.id} className="relative group mb-4">
+                <MessageBubble
+                  messageId={msg.id}
+                  content={msg.content}
+                  isOwn={msg.sender_address === userWalletAddress}
+                  reactions={msg.reactions || []}
+                  timestamp={msg.created_at}
+                  isEdited={!!msg.edited_at}
+                  isPinned={!!msg.pinned}
+                  onReaction={(emoji) => handleReaction(msg.id, emoji)}
+                  onReply={(msgId) => setReplyTo(msgId)}
+                  onEdit={(msgId) => handleEditMessage(msgId)}
+                  onPin={(msgId) => handlePin(msgId)}
+                  onDelete={(msgId) => handleDeleteMessage(msgId)}
+                  showBusinessCard={msg.showBusinessCard}
+                  businessCard={msg.businessCard}
+                  senderAddress={msg.sender_address}
+                />
+              </div>
+            ))}
+          </AnimatePresence>
+        )}
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* Message Input */}
+      <div className="p-4 border-t border-white/5 bg-[#1E1E2F]/30 backdrop-blur-sm">
+        <form onSubmit={handleSubmit} className="space-y-2">
+          {replyTo && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+              className="flex items-center justify-between bg-[#1E1E2F]/50 backdrop-blur-sm rounded-xl p-2 border border-white/5"
+            >
+              <div className="flex items-center space-x-2 text-sm text-indigo-300">
+                <CornerDownRight className="w-4 h-4" />
+                <span className="italic truncate">
+                  {messages.find(m => m.id === replyTo)?.content || "Message not found"}
+                </span>
+              </div>
+              <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={() => setReplyTo(null)}
+                className="text-gray-400 hover:text-red-400 transition-colors"
+              >
+                ×
+              </motion.button>
+            </motion.div>
+          )}
+
           <div className="flex space-x-2">
             <input
               type="text"
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               placeholder={editing ? "Edit message..." : "Type a message..."}
-              className="flex-1 p-3 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              className="flex-1 p-3 bg-[#1E1E2F]/80 border border-white/5 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
             />
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              type="button"
+              onClick={() => setError("Image sharing is disabled in mock mode")}
+              className="p-3 text-gray-400 hover:text-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded-xl transition-colors bg-[#1E1E2F]/80 border border-white/5"
+            >
+              <Image className="w-5 h-5" />
+            </motion.button>
             <input
               type="file"
               ref={fileInputRef}
-              onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0])}
               className="hidden"
               accept="image/*,.pdf,.doc,.docx"
             />
-            <button
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
               type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="p-3 text-gray-400 hover:text-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded-lg transition-colors"
+              onClick={() => setError("File uploads are disabled in mock mode")}
+              className="p-3 text-gray-400 hover:text-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded-xl transition-colors bg-[#1E1E2F]/80 border border-white/5"
             >
               📎
-            </button>
-            <button
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
               type="submit"
-              className="px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors duration-200"
+              className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-indigo-800 text-white rounded-xl hover:from-indigo-500 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all duration-200 shadow-lg shadow-indigo-500/20"
             >
               {editing ? "Update" : "Send"}
-            </button>
+            </motion.button>
           </div>
         </form>
       </div>

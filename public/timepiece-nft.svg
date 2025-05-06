@@ -1,0 +1,7 @@
+<svg width="400" height="400" xmlns="http://www.w3.org/2000/svg">
+  <rect width="400" height="400" fill="#5E35B1"/>
+  <circle cx="200" cy="200" r="120" fill="#7E57C2" stroke="#9575CD" stroke-width="2"/>
+  <text x="200" y="180" font-family="Arial" font-size="32" fill="#FFFFFF" text-anchor="middle">EONIC</text>
+  <text x="200" y="220" font-family="Arial" font-size="24" fill="#FFFFFF" text-anchor="middle">TIMEPIECE</text>
+  <text x="200" y="260" font-family="Arial" font-size="20" fill="#FFFFFF" text-anchor="middle">GENESIS</text>
+</svg> 

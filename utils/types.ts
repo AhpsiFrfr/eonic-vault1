@@ -1,3 +1,5 @@
+import { SmartActionType } from './enico';
+
 export interface ChatMessage {
   id: string;
   content: string;
@@ -10,6 +12,7 @@ export interface ChatMessage {
   reply_count?: number;
   reactions?: Record<string, string[]>;
   attachments?: MessageAttachment[];
+  smart_action?: SmartActionType;
 }
 
 export interface MessageAttachment {

@@ -1,212 +1,135 @@
 'use client';
 
 import { useWallet } from '@solana/wallet-adapter-react';
-import { useState } from 'react';
-import Chat from '../../components/Chat';
-import NFTGallery from '../../components/NFTGallery';
-import { Cabal } from '../../components/Cabal';
-import CommunityChat from '../../components/CommunityChat';
-import { supabase } from '../../utils/supabase';
+import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import Link from 'next/link';
+import { getMockProfile, createDefaultProfile, UserMetrics } from '../../utils/mock-data';
 
-// DM list will be loaded dynamically in the DM tab
+// Dashboard Components
+interface DashboardCardProps {
+  title: string;
+  value: string;
+  subtitle?: string;
+}
 
-const tabs = [
-  { id: 'dms', name: 'Direct Messages' },
-  { id: 'vault', name: 'Vault' },
-  { id: 'community', name: 'Community' },
-  { id: 'profile', name: 'Profile' },
-];
+const DashboardCard = ({ title, value, subtitle = '' }: DashboardCardProps) => (
+  <motion.div 
+    whileHover={{ y: -5, boxShadow: '0 10px 25px rgba(79, 70, 229, 0.2)' }}
+    className="bg-gradient-to-br from-[#1E1E2F] to-[#252538] p-5 rounded-xl border border-indigo-500/20 hover:border-indigo-500/50 transition-all"
+  >
+    <h3 className="text-gray-400 text-sm font-medium mb-1">{title}</h3>
+    <p className="text-2xl font-bold text-white">{value}</p>
+    {subtitle && <p className="text-indigo-400 text-sm mt-1">{subtitle}</p>}
+  </motion.div>
+);
 
-const communityRooms = [
-  { id: 'general', name: 'General' },
-  { id: 'cabal', name: 'Cabal' },
-  { id: 'investor', name: 'Investor' },
-];
+interface QuickLinkProps {
+  label: string;
+  href: string;
+  icon: string;
+}
+
+const QuickLink = ({ label, href, icon }: QuickLinkProps) => (
+  <Link href={href}>
+    <motion.div 
+      whileHover={{ scale: 1.03 }}
+      whileTap={{ scale: 0.98 }}
+      className="flex items-center gap-3 p-4 bg-[#1E1E2F] rounded-lg border border-indigo-500/20 hover:border-indigo-500/50 transition-all cursor-pointer"
+    >
+      <div className="text-2xl">{icon}</div>
+      <span className="font-medium">{label}</span>
+    </motion.div>
+  </Link>
+);
 
 export default function Dashboard() {
   const { publicKey } = useWallet();
-  const [selectedDM, setSelectedDM] = useState<string>(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('selectedDM') || '';
-    }
-    return '';
+  const walletAddress = publicKey?.toString() || '';
+  const [displayName, setDisplayName] = useState('Vault Member');
+  const [userMetrics, setUserMetrics] = useState<UserMetrics>({
+    level: 1,
+    currentXp: 0,
+    eonicBalance: 0,
+    referralCount: 0,
+    hasTimepiece: false,
+    timepieceImageUrl: '/timepiece-nft.png',
+    timepieceStage: 'Genesis',
+    nftXp: 0
   });
-  const [activeTab, setActiveTab] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('activeTab') || 'dms';
-    }
-    return 'dms';
-  });
-  const [currentRoom, setCurrentRoom] = useState('general');
-  const [communityRoom, setCommunityRoom] = useState('general');
-  const [onlineUsers, setOnlineUsers] = useState<Array<{ id: string; username: string; wallet_address: string }>>([]);
-  const userWalletAddress = publicKey?.toString() || '';
 
-  const getOnlineUsers = async (roomId: string) => {
-    const { data } = await supabase
-      .from('online_users')
-      .select('id, username, wallet_address')
-      .eq('room_id', roomId)
-      .gte('last_seen', new Date(Date.now() - 5 * 60 * 1000).toISOString());
-    return data || [];
-  };
+  useEffect(() => {
+    // In a real application, you would fetch user data from your API
+    const fetchUserData = async () => {
+      if (walletAddress) {
+        // Try to get profile from mock data, or create a default one
+        const profile = getMockProfile(walletAddress) || createDefaultProfile(walletAddress);
+        
+        // Update display name
+        setDisplayName(profile.display_name || 'Vault Member');
+        
+        // Set mock metrics
+        setUserMetrics({
+          level: 3,
+          currentXp: 2450,
+          eonicBalance: 125,
+          referralCount: 2,
+          hasTimepiece: true,
+          timepieceImageUrl: profile.timepiece_url || '/timepiece-nft.png',
+          timepieceStage: 'Genesis',
+          nftXp: 750
+        });
+        
+        console.log('[MOCK] Dashboard loaded timepiece image:', profile.timepiece_url || '/timepiece-nft.png');
+      }
+    };
+
+    fetchUserData();
+  }, [walletAddress]);
+
+  const { 
+    level, 
+    currentXp, 
+    eonicBalance, 
+    referralCount,
+    hasTimepiece,
+    timepieceImageUrl,
+    timepieceStage,
+    nftXp
+  } = userMetrics;
 
   return (
-    <div className="flex h-screen text-white bg-gray-950 overflow-hidden">
-      {/* LEFT: Navigation */}
-      <div className="w-64 p-6 bg-gray-900 border-r border-gray-800">
-        <h2 className="text-lg font-semibold mb-4 text-gray-300">Platform</h2>
-        {/* Navigation Tabs */}
-        <ul className="space-y-2">
-          {tabs.map((tab) => (
-            <li
-              key={tab.id}
-              onClick={() => {
-                setActiveTab(tab.id);
-                localStorage.setItem('activeTab', tab.id);
-                if (tab.id !== 'dms') {
-                  setSelectedDM('');
-                  localStorage.removeItem('selectedDM');
-                }
-              }}
-              className={`cursor-pointer p-3 rounded-lg text-sm transition-colors ${
-                activeTab === tab.id
-                  ? 'bg-indigo-600 text-white'
-                  : 'text-gray-400 hover:bg-gray-800'
-              }`}
-            >
-              {tab.name}
-            </li>
-          ))}
-        </ul>
+    <div className="w-full px-4 py-6 space-y-6 text-white">
+      <h2 className="text-2xl font-bold mb-6">Welcome Back to the Vault, {displayName}!</h2>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+        <DashboardCard title="Current Level" value={`Level ${level}`} subtitle={`${currentXp} XP`} />
+        <DashboardCard title="$EONIC Held" value={`${eonicBalance} $EONIC`} />
+        <DashboardCard title="Referrals" value={`${referralCount} Activated`} />
       </div>
 
-      {/* RIGHT: Chat/Tab Window */}
-      <div className="flex-1 bg-gray-900">
-        {/* Direct Messages Tab */}
-        {activeTab === 'dms' ? (
-          <div className="flex flex-col h-full">
-            <div className="p-4 border-b border-gray-800">
-              <h3 className="text-lg font-semibold text-gray-300 mb-4">Direct Messages</h3>
-              {/* DM List */}
-              <div className="grid gap-2">
-                {['ENIC.0', 'Zypher', 'Cabal Ops'].map((dmName) => (
-                  <button
-                    key={dmName}
-                    onClick={() => {
-                      setSelectedDM(dmName);
-                      localStorage.setItem('selectedDM', dmName);
-                    }}
-                    className={`w-full p-3 text-left rounded-lg transition-colors ${
-                      selectedDM === dmName
-                        ? 'bg-indigo-600 text-white'
-                        : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-                    }`}
-                  >
-                    {dmName}
-                  </button>
-                ))}
-              </div>
-            </div>
-            {/* Chat Window */}
-            <div className="flex-1 overflow-hidden">
-              {selectedDM ? (
-                <Chat room="dm" isDM={true} recipientAddress={selectedDM} />
-              ) : (
-                <div className="flex items-center justify-center h-full text-gray-500">
-                  Select a conversation to start messaging
-                </div>
-              )}
-            </div>
-          </div>
-        ) : activeTab === 'vault' ? (
-          <NFTGallery />
-        ) : activeTab === 'community' ? (
-          <div className="flex flex-col h-full">
-            {/* Room switcher */}
-            <div className="flex space-x-2 p-4 border-b border-gray-700">
-              {communityRooms.map((room) => (
-                <button
-                  key={room.id}
-                  className={`px-4 py-2 rounded-lg text-sm ${
-                    communityRoom === room.id
-                      ? 'bg-indigo-700 text-white'
-                      : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-                  }`}
-                  onClick={() => setCommunityRoom(room.id)}
-                >
-                  {room.name}
-                </button>
-              ))}
-            </div>
+      {hasTimepiece && (
+        <div className="mt-6 bg-gradient-to-r from-indigo-800 to-violet-700 rounded-xl p-4">
+          <h3 className="text-lg font-semibold mb-2">Timepiece Evolution</h3>
+          <img 
+            src={timepieceImageUrl} 
+            alt="Your NFT Timepiece" 
+            className="w-full max-w-sm rounded-lg" 
+            onError={(e) => {
+              // Fallback if the image fails to load
+              console.error('Failed to load timepiece image, using fallback');
+              // Use our SVG placeholder
+              e.currentTarget.src = '/timepiece-nft.svg';
+            }}
+          />
+          <p className="text-sm mt-2">Stage: {timepieceStage} • XP: {nftXp}</p>
+        </div>
+      )}
 
-            {/* Community chat for selected room */}
-            <div className="flex-1 overflow-y-auto">
-              <CommunityChat
-                userWalletAddress={userWalletAddress}
-                roomId={communityRoom}
-              />
-            </div>
-          </div>
-        ) : activeTab === 'profile' ? (
-          <div className="flex-1 p-6 overflow-auto bg-gray-900">
-            <div className="max-w-md mx-auto text-sm text-white">
-              <h2 className="text-xl font-bold mb-6">Your Profile</h2>
-              
-              <div className="flex items-center mb-6 space-x-4">
-                <img
-                  src="https://via.placeholder.com/64"
-                  alt="Avatar"
-                  className="rounded-full w-16 h-16 border border-indigo-500"
-                />
-                <div>
-                  <p className="text-gray-400">Wallet:</p>
-                  <p className="font-mono text-indigo-400 break-all">{userWalletAddress || 'Not connected'}</p>
-                </div>
-              </div>
-
-              <div className="mb-4">
-                <label className="block text-gray-300 mb-1">Username</label>
-                <input
-                  type="text"
-                  placeholder="Enter username"
-                  className="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
-
-              <div className="mb-6">
-                <label className="block text-gray-300 mb-1">Bio</label>
-                <textarea
-                  placeholder="Tell us about you..."
-                  className="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  rows={4}
-                />
-              </div>
-
-              <div className="mb-6">
-                <label className="block text-gray-300 mb-2">Achievements</label>
-                <div className="grid grid-cols-4 gap-4 p-4 bg-gray-800 rounded-lg border border-gray-700">
-                  {/* Placeholder trophies */}
-                  {[1, 2, 3, 4].map((i) => (
-                    <div key={i} className="flex items-center justify-center w-12 h-12 bg-gray-700 rounded-lg">
-                      <span className="text-2xl">🏆</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <button className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition">
-                Save Changes
-              </button>
-            </div>
-          </div>
-        ) : activeTab === 'cabal' ? (
-          <Cabal />
-        ) : (
-          <div className="flex items-center justify-center h-full text-gray-400">
-            <p>Coming soon: {activeTab}</p>
-          </div>
-        )}
+      <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+        <QuickLink label="Customize EON-ID" href="/dashboard/eon-id" icon="🧬" />
+        <QuickLink label="Enter Community" href="/dashboard/community" icon="💬" />
+        <QuickLink label="Claim Rewards" href="/dashboard/vault" icon="🎁" />
       </div>
     </div>
   );
