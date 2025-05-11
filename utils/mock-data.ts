@@ -26,6 +26,9 @@ export interface MockProfile {
   created_at?: string;
   updated_at?: string;
   timepiece_url?: string;
+  // Business card fields
+  show_business_card?: boolean;
+  card_style?: string;
 }
 
 // Global storage for mock profiles
@@ -42,13 +45,13 @@ export function saveMockProfile(profile: MockProfile): void {
   
   mockProfiles.set(profile.wallet_address, {
     ...profile,
-    timepiece_url: profile.timepiece_url || existingProfile?.timepiece_url || '/timepiece-nft.png',
+    timepiece_url: profile.timepiece_url || existingProfile?.timepiece_url || '/timepiece-nft.svg',
     updated_at: new Date().toISOString()
   });
   
   console.log('[MOCK] Profile saved:', profile.wallet_address.substring(0, 8) + '...', {
     avatar: profile.avatar_url ? 'Set' : 'Not set',
-    timepiece: profile.timepiece_url || existingProfile?.timepiece_url || '/timepiece-nft.png'
+    timepiece: profile.timepiece_url || existingProfile?.timepiece_url || '/timepiece-nft.svg'
   });
 }
 
@@ -61,7 +64,7 @@ export function createDefaultProfile(walletAddress: string): MockProfile {
     title: 'EONIC DEV',
     bio: '',
     avatar_url: '/default-avatar.png',
-    timepiece_url: '/timepiece-nft.png',
+    timepiece_url: '/timepiece-nft.svg',
     use_shortened_wallet: false,
     tagline: '',
     domain: '',
@@ -70,6 +73,9 @@ export function createDefaultProfile(walletAddress: string): MockProfile {
     show_holdings: true,
     is_public: true,
     social_links: {},
+    // Business card defaults
+    show_business_card: false,
+    card_style: 'intern',
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
   };

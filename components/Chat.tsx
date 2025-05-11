@@ -8,7 +8,10 @@ import { ChatMessage, DirectMessage, MessageAttachment, getMessages, sendMessage
 import { EmojiPicker } from './EmojiPicker';
 import { FileUpload } from './FileUpload';
 import { MessageContextMenu } from './MessageContextMenu';
+import { MessageBubble } from './MessageBubble';
 import { useEnicBot } from '../hooks/useEnicBot';
+import { TypingIndicator } from './TypingIndicator';
+import MessageSearch from './MessageSearch';
 import type { ChatMessage as TypesChatMessage } from '../utils/types';
 import type { ChatMessage as SupabaseChatMessage } from '../utils/supabase';
 
@@ -24,6 +27,7 @@ interface Props {
 export default function Chat({ room = 'general', parentId, isDM, recipientAddress }: Props) {
   const { publicKey } = useWallet();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [filteredMessages, setFilteredMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [attachments, setAttachments] = useState<File[]>([]);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -32,6 +36,32 @@ export default function Chat({ room = 'general', parentId, isDM, recipientAddres
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { generateReply, getSuggestions, isProcessing } = useEnicBot();
   const [suggestedReplies, setSuggestedReplies] = useState<string[]>([]);
+  const [isTyping, setIsTyping] = useState(false);
+  const [usersTyping, setUsersTyping] = useState<{[key: string]: {typing: boolean, username: string}}>({});
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [activeThread, setActiveThread] = useState<string | null>(null);
+  const [messageCache, setMessageCache] = useState<{[id: string]: ChatMessage}>({});
+
+  // Search functionality
+  const handleSearch = useCallback((query: string) => {
+    if (!query.trim()) {
+      setFilteredMessages(messages);
+      return;
+    }
+    
+    const q = query.toLowerCase();
+    setFilteredMessages(
+      messages.filter(m => 
+        (m.content || '').toLowerCase().includes(q) || 
+        (m.sender_address || '').toLowerCase().includes(q)
+      )
+    );
+  }, [messages]);
+
+  // Update filtered messages when messages change
+  useEffect(() => {
+    setFilteredMessages(messages);
+  }, [messages]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -196,27 +226,30 @@ export default function Chat({ room = 'general', parentId, isDM, recipientAddres
     if ((!newMessage.trim() && attachments.length === 0) || !publicKey) return;
 
     try {
+      const parentMessageId = replyingTo?.id || (activeThread || undefined);
+      
       const { data: message, error } = await sendMessage(
         newMessage,
         publicKey.toString(),
         room,
-        replyingTo?.id || parentId,
-        attachments
+        attachments,
+        parentMessageId
       );
       
-      if (error) {
-        throw error;
+      if (error) throw error;
+
+      // Update thread counts for the parent message
+      if (parentMessageId) {
+        await supabase
+          .rpc('increment_thread_count', { message_id: parentMessageId });
       }
-      
-      if (message) {
-        setMessages(prev => [...prev, message]);
+
         setNewMessage('');
         setAttachments([]);
         setReplyingTo(null);
         scrollToBottom();
-      }
     } catch (error) {
-      console.error('Error sending message:', error instanceof Error ? error.message : 'Unknown error');
+      console.error('Error sending message:', error);
     }
   };
 
@@ -352,107 +385,30 @@ export default function Chat({ room = 'general', parentId, isDM, recipientAddres
     const isTransaction = message.content.startsWith('🧾');
 
   return (
-          <div 
-            key={message.id} 
-        className={`flex mb-4 ${isCurrentUser ? 'justify-end' : 'justify-start'}`}
-          >
-            <div className="max-w-sm space-y-2">
-              <div
-                onContextMenu={(e) => handleContextMenu(e, message)}
-            className={`rounded-lg p-3 ${
-              isTransaction
-                ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white'
-                : isBot 
-                  ? 'bg-gradient-to-r from-purple-500 to-indigo-500 text-white'
-                  : isCurrentUser
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-white text-gray-900'
-            } cursor-pointer`}
-              >
-                <div className="flex items-center space-x-2 mb-1">
-              {isBot ? (
-                <div className="flex items-center space-x-1">
-                  <span className="text-xs font-semibold">ENIC.0</span>
-                  {smartActionIcon && (
-                    <span className="text-sm" title={message.smart_action}>
-                      {smartActionIcon}
-                    </span>
-                  )}
-                </div>
-              ) : (
-                  <span className="text-xs opacity-75">
-                    {message.sender_address?.slice(0, 4)}...{message.sender_address?.slice(-4)}
-                  </span>
-              )}
-                  <span className="text-xs opacity-75">
-                {new Date(message.created_at).toLocaleTimeString([], { 
+      <div key={message.id} className={`message-container ${isCurrentUser ? 'own-message' : 'other-message'} mb-6`}>
+        <MessageBubble
+          content={message.content}
+          isOwn={isCurrentUser}
+          reactions={message.reactions}
+          messageId={message.id}
+          timestamp={new Date(message.created_at).toLocaleTimeString([], { 
                   hour: '2-digit',
                   minute: '2-digit'
                 })}
-                  </span>
-                </div>
-
-                {message.parent_id && (
-                  <div className="text-sm opacity-75 mb-2">
-                    Replying to message...
-                  </div>
-                )}
-
-            <p className={`whitespace-pre-wrap break-words ${
-              isTransaction ? 'font-medium' : ''
-            }`}>{message.content}</p>
-
-                {message.attachments?.map((attachment: MessageAttachment) => (
-                  <div key={attachment.id} className="mt-2">
-                    {attachment.type.startsWith('image/') ? (
-                      <div className="relative w-full">
-                        <img
-                          src={attachment.url}
-                          alt={attachment.filename}
-                          className="rounded-lg w-full h-auto"
-                          loading="lazy"
-                        />
-                      </div>
-                    ) : (
-                      <a
-                        href={attachment.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-500 hover:underline flex items-center space-x-2"
-                      >
-                        📎 <span>{attachment.filename}</span>
-                        <span className="text-sm opacity-75">({Math.round(attachment.size / 1024)}KB)</span>
-                      </a>
-                    )}
-                  </div>
-                ))}
-
-              {message.reactions && message.reactions.length > 0 && (
-                <div className="mt-1 flex flex-wrap gap-1">
-                  {Array.from(new Set(message.reactions.map(r => r.emoji))).map(emoji => {
-                    const count = message.reactions?.filter(r => r.emoji === emoji).length || 0;
-                    const hasReacted = message.reactions?.some(
-                      r => r.emoji === emoji && r.sender_address === publicKey?.toString()
-                    );
-                    
-                    return (
-                      <button
-                        key={`${message.id}-${emoji}`}
-                        onClick={() => handleReaction(message.id, emoji)}
-                        className={`px-2 py-0.5 rounded-full text-sm transition-colors ${
-                          hasReacted
-                            ? 'bg-blue-100 hover:bg-blue-200'
-                            : 'bg-gray-100 hover:bg-gray-200'
-                        }`}
-                      >
-                        {emoji} {count > 1 && count}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
+          onReaction={(emoji, event) => handleReaction(message.id, emoji)}
+          onReply={() => setReplyingTo(message)}
+          onEdit={isCurrentUser ? () => console.log('Edit message', message.id) : undefined}
+          onPin={() => console.log('Pin message', message.id)}
+          onDelete={isCurrentUser ? () => handleDeleteMessage(message.id) : undefined}
+          isEdited={message.edited_at !== null}
+          isPinned={false} // TODO: Implement pinned messages
+          showBusinessCard={true}
+          senderAddress={message.sender_address}
+          parentId={message.parent_id}
+          parentContent={message.parent_id ? getParentContent(message.parent_id) : undefined}
+          replyCount={message.thread_count || 0}
+          onViewThread={(id) => loadThread(id)}
+        />
       </div>
     );
   };
@@ -470,10 +426,207 @@ export default function Chat({ room = 'general', parentId, isDM, recipientAddres
     navigator.clipboard.writeText(text);
   };
 
+  // New function to broadcast typing status
+  const broadcastTypingStatus = useCallback(async (typing: boolean) => {
+    if (!publicKey) return;
+    
+    const userAddress = publicKey.toString();
+    
+    try {
+      await supabase
+        .from('typing_indicators')
+        .upsert([
+          {
+            user_address: userAddress,
+            room: room,
+            is_typing: typing,
+            updated_at: new Date().toISOString()
+          }
+        ], { onConflict: 'user_address, room' });
+    } catch (error) {
+      console.error('Error updating typing status:', error);
+    }
+  }, [publicKey, room]);
+
+  // Add effect to handle input change for typing indicator
+  useEffect(() => {
+    if (!newMessage || !publicKey) return;
+    
+    setIsTyping(true);
+    broadcastTypingStatus(true);
+    
+    // Clear previous timeout
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+    
+    // Set a new timeout to clear typing status after 3 seconds of inactivity
+    typingTimeoutRef.current = setTimeout(() => {
+      setIsTyping(false);
+      broadcastTypingStatus(false);
+    }, 3000);
+    
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+    };
+  }, [newMessage, publicKey, broadcastTypingStatus]);
+
+  // Subscribe to typing indicators
+  useEffect(() => {
+    if (!publicKey) return;
+    
+    const channel = supabase
+      .channel('typing_indicators')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'typing_indicators',
+          filter: `room=eq.${room}`
+        },
+        (payload) => {
+          const data = payload.new;
+          // Don't show current user's typing status
+          if (data.user_address === publicKey.toString()) return;
+          
+          setUsersTyping(prev => ({
+            ...prev,
+            [data.user_address]: {
+              typing: data.is_typing,
+              username: data.user_address.slice(0, 6) + '...'
+            }
+          }));
+        }
+      )
+      .subscribe();
+      
+    return () => {
+      channel.unsubscribe();
+    };
+  }, [room, publicKey]);
+
+  // Load messages in a thread
+  const loadThread = useCallback(async (messageId: string) => {
+    try {
+      if (!messageId) return;
+      
+      // If we're already looking at a thread, go back to main view
+      if (activeThread === messageId) {
+        setActiveThread(null);
+        return loadMessages();
+      }
+      
+      // First, get the parent message if not in cache
+      if (!messageCache[messageId]) {
+        const { data: parentMessage, error: parentError } = await supabase
+          .from('messages')
+          .select('*, reactions:message_reactions(*), attachments:message_attachments(*)')
+          .eq('id', messageId)
+          .single();
+          
+        if (parentError) throw parentError;
+        
+        // Add to cache
+        if (parentMessage) {
+          setMessageCache(prev => ({
+            ...prev,
+            [messageId]: parentMessage
+          }));
+        }
+      }
+      
+      // Then get all replies to this message
+      const { data: threadMessages, error: threadError } = await supabase
+        .from('messages')
+        .select('*, reactions:message_reactions(*), attachments:message_attachments(*)')
+        .eq('parent_id', messageId)
+        .order('created_at', { ascending: true });
+        
+      if (threadError) throw threadError;
+      
+      // Combine parent message with replies
+      const allThreadMessages = [
+        messageCache[messageId] || {}, 
+        ...(threadMessages || [])
+      ].filter(m => m && m.id);
+      
+      setMessages(allThreadMessages as ChatMessage[]);
+      setActiveThread(messageId);
+      
+    } catch (error) {
+      console.error('Error loading thread:', error);
+    }
+  }, [activeThread, messageCache, loadMessages]);
+
+  // Get parent message content
+  const getParentContent = useCallback((parentId: string) => {
+    // Check the cache first
+    if (messageCache[parentId]) {
+      return messageCache[parentId].content;
+    }
+    
+    // If not in cache, return a placeholder and fetch it
+    fetchParentMessage(parentId);
+    return "Loading...";
+  }, [messageCache]);
+  
+  const fetchParentMessage = useCallback(async (parentId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('messages')
+        .select('id, content')
+        .eq('id', parentId)
+        .single();
+        
+      if (error) throw error;
+      
+      if (data) {
+        setMessageCache(prev => ({
+          ...prev,
+          [parentId]: data
+        }));
+      }
+    } catch (error) {
+      console.error('Error fetching parent message:', error);
+    }
+  }, []);
+
   return (
     <div className="h-full flex flex-col bg-gray-900 text-white relative">
+      {activeThread && (
+        <div className="bg-gray-800 p-2 flex items-center text-sm">
+          <button 
+            onClick={() => {
+              setActiveThread(null);
+              loadMessages();
+            }}
+            className="hover:bg-gray-700 rounded px-2 py-1 flex items-center gap-1"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Back to messages
+          </button>
+          <span className="ml-2 text-gray-400">Viewing thread</span>
+        </div>
+      )}
+      
+      {/* Add message search at the top */}
+      <MessageSearch onSearch={handleSearch} />
+      
       <div className="flex-1 overflow-y-auto p-4 pb-24">
-        {messages.map(renderMessage)}
+        {filteredMessages.map(renderMessage)}
+        
+        {/* Typing indicators */}
+        {Object.values(usersTyping)
+          .filter(user => user.typing)
+          .map(user => (
+            <TypingIndicator key={user.username} user={user.username} />
+          ))}
+          
         <div ref={messagesEndRef} />
       </div>
 
@@ -506,15 +659,24 @@ export default function Chat({ room = 'general', parentId, isDM, recipientAddres
               </button>
             </div>
           )}
+          {activeThread && !replyingTo && (
+            <div className="mb-2 text-sm text-gray-400">
+              Replying in thread
+            </div>
+          )}
           <div className="flex items-center space-x-2">
             <FileUpload onFileSelect={(files) => setAttachments(Array.from(files))} />
             <input
               type="text"
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
-              placeholder="Type a message..."
+              placeholder={activeThread ? "Reply in thread..." : "Type a message..."}
               className="flex-1 bg-gray-800 text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               autoFocus
+              onBlur={() => {
+                setIsTyping(false);
+                broadcastTypingStatus(false);
+              }}
             />
             <button
               type="button"

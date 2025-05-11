@@ -1,6 +1,8 @@
 import { ClientWalletProvider } from '../components/WalletProvider';
 import './globals.css';
 import '@solana/wallet-adapter-react-ui/styles.css';
+import { ReactionAnimationsContainer } from '../components/ReactionAnimationsContainer';
+import { DemoUploader } from '../components/DemoUploader';
 
 export default function RootLayout({
   children,
@@ -10,7 +12,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <ClientWalletProvider>{children}</ClientWalletProvider>
+        <ClientWalletProvider>
+          {children}
+          <ReactionAnimationsContainer />
+          <DemoUploader />
+        </ClientWalletProvider>
       </body>
     </html>
   );

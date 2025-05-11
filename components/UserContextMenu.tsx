@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { BusinessCardPanel } from './BusinessCardPanel';
+import { EonIDPanel } from './EonIDPanel';
 
 interface UserContextMenuProps {
   x: number;
@@ -58,7 +58,7 @@ export function UserContextMenu({ x, y, user, onClose }: UserContextMenuProps) {
                 className="w-full px-4 py-2 text-left text-white hover:bg-gray-700/50 flex items-center space-x-2"
               >
                 <span>👔</span>
-                <span>View Business Card</span>
+                <span>View EON-ID</span>
               </button>
             )}
             {/* Add other menu items here */}
@@ -67,7 +67,7 @@ export function UserContextMenu({ x, y, user, onClose }: UserContextMenuProps) {
       </motion.div>
 
       {/* Business Card Panel */}
-      <BusinessCardPanel
+      <EonIDPanel
         isOpen={showBusinessCard}
         onClose={() => {
           setShowBusinessCard(false);

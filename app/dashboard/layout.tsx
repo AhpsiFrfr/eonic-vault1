@@ -4,7 +4,7 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ViewModeToggle } from '../../components/ViewModeToggle';
@@ -39,17 +39,9 @@ const ProfileSection = ({ walletAddress }: { walletAddress: string }) => {
   const pathname = usePathname() || '';
   const isOnDashboard = pathname === '/dashboard';
   
-  useEffect(() => {
-    updateProfileData();
-    
-    const intervalId = setInterval(() => {
-      updateProfileData();
-    }, 2000);
-    
-    return () => clearInterval(intervalId);
-  }, [walletAddress]);
-  
-  const updateProfileData = () => {
+  // Define updateProfileData with useCallback to prevent infinite loops
+  const updateProfileData = useCallback(() => {
+    // Get profile data from mock storage
     const profile = getMockProfile(walletAddress) || createDefaultProfile(walletAddress);
     
     if (profile.display_name !== displayName || profile.avatar_url !== avatarUrl) {
@@ -64,7 +56,29 @@ const ProfileSection = ({ walletAddress }: { walletAddress: string }) => {
       setAvatarUrl(profile.avatar_url || '/default-avatar.png');
       setRefreshKey(prev => prev + 1);
     }
-  };
+  }, [walletAddress, displayName, avatarUrl]);
+  
+  // Check for profile updates on mount and when wallet changes
+  useEffect(() => {
+    updateProfileData();
+    
+    // Set up periodic checking for profile updates
+    const intervalId = setInterval(() => {
+      updateProfileData();
+    }, 2000); // Check every 2 seconds
+    
+    return () => clearInterval(intervalId);
+  }, [walletAddress, updateProfileData]);
+
+  // Also update when returning to this page
+  useEffect(() => {
+    const handleFocus = () => {
+      updateProfileData();
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [updateProfileData]);
   
   return (
     <Link href="/dashboard">
@@ -152,27 +166,41 @@ export default function DashboardLayout({
   const [viewMode, setViewMode] = useState<ViewMode>('web');
 
   useEffect(() => {
-    if (!connected) {
-      router.push('/login');
+    console.log('💼 Dashboard Layout - Initial wallet state:', { connected, publicKey: publicKey?.toString() });
+    
+    // Clear the hyperspeed animation completion flag when dashboard loads
+    // so it doesn't interfere with regular navigation
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('hyperspeedAnimationCompleted');
     }
-  }, [connected, router]);
-
-  useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth < 768) {
-        setIsExpanded(false);
-      }
-    };
-
-    window.addEventListener('resize', handleResize);
-    handleResize();
-
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  if (!connected) {
-    return null;
-  }
+    
+    // ***TEMPORARILY DISABLED REDIRECT FOR TESTING***
+    // No more redirects back to login to avoid loops
+    // This lets us access the dashboard directly without wallet connection
+    
+    console.log('💼 Dashboard access allowed without wallet to prevent loops.');
+    
+    /* Original code - temporarily disabled
+    if (!connected && 
+        !localStorage.getItem('preventLoginRedirect') && 
+        pathname !== '/login') {
+      
+      console.log('💼 Wallet not connected, redirecting to login');
+      
+      // Set a flag to prevent immediate redirect back if user manually navigates to dashboard
+      localStorage.setItem('preventLoginRedirect', 'true');
+      
+      // Clear the flag after a reasonable time
+      setTimeout(() => {
+        localStorage.removeItem('preventLoginRedirect');
+      }, 5000);
+      
+      router.push('/login');
+    } else {
+      console.log('💼 Wallet connection status:', connected ? 'Connected' : 'Not connected, but redirect prevention active');
+    }
+    */
+  }, [connected, router, publicKey, pathname]);
 
   const isOnDashboard = pathname === '/dashboard';
 
@@ -242,16 +270,13 @@ export default function DashboardLayout({
         }`}
       >
         <div className={`mx-auto transition-all duration-300 ${viewMode === 'mobile' ? 'max-w-[375px]' : 'w-full'}`}>
-          {/* Hide welcome message in Dashboard as it's shown in the sidebar */}
           <div className="p-6">
-            {isOnDashboard ? (
-              <div className="mt-12">{children}</div>
-            ) : (
-              children
-            )}
+            <div className="mt-12">{children}</div>
           </div>
         </div>
       </main>
     </div>
   );
 }
+
+

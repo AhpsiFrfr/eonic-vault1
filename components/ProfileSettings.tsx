@@ -20,9 +20,9 @@ export function ProfileSettings({ onUpdateSettings }: ProfileSettingsProps) {
       {/* Business Card Visibility */}
       <div className="flex items-center justify-between py-4 border-b border-gray-700/50">
         <div>
-          <h3 className="text-lg font-medium text-white">Show My Business Card</h3>
+          <h3 className="text-lg font-medium text-white">Show My EON-ID</h3>
           <p className="text-sm text-gray-400">
-            Allow other users to view your business card with professional details
+            Allow other users to view your EON-ID with professional details
           </p>
         </div>
         <div className="flex items-center">

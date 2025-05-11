@@ -1,118 +1,236 @@
 'use client';
-
+import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
+import { motion, AnimatePresence } from 'framer-motion';
+import { WalletButton } from '../../components/WalletButton';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import { WalletButton } from '../../components/WalletButton';
-import { setWalletCookie, removeWalletCookie } from '../../utils/auth';
+import { HyperspeedTransition } from '../../components/animations/HyperspeedTransition';
 
-export default function Login() {
-  const { connected, connecting, publicKey, disconnect, wallets } = useWallet();
+// Ship decorations with correct path references
+const walletShips = [
+  {
+    name: 'Phantom',
+    logo: '/images/phantom-ship.png',
+    color: 'violet',
+    orbit: '-top-6 left-1/2 -translate-x-1/2',
+  },
+  {
+    name: 'Coinbase',
+    logo: '/images/coinbase-ship.png',
+    color: 'blue',
+    orbit: 'bottom-12 left-[40%]',
+  },
+  {
+    name: 'Solflare',
+    logo: '/images/solflare-ship.png',
+    color: 'orange',
+    orbit: 'bottom-12 right-[40%]',
+  },
+  {
+    name: 'MetaMask',
+    logo: '/images/metamask-ship.png',
+    color: 'yellow',
+    orbit: 'top-1/2 right-12 -translate-y-1/2',
+  },
+];
+
+export default function LoginPage() {
+  const { connected } = useWallet();
   const router = useRouter();
-  const [detectedWallets, setDetectedWallets] = useState<string[]>([]);
-  const [shouldRedirect, setShouldRedirect] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
+  const [showHyperspace, setShowHyperspace] = useState(false);
 
-  useEffect(() => {
-    // Detect installed wallets
-    if (typeof window !== 'undefined') {
-      const detected: string[] = [];
-      
-      if (window.hasOwnProperty('solana') && window.solana?.isPhantom) {
-        detected.push('Phantom');
-      }
-      
-      if (window.hasOwnProperty('solflare')) {
-        detected.push('Solflare');
-      }
-      
-      setDetectedWallets(detected);
-    }
-  }, []);
-
-  useEffect(() => {
-    // Always display the connect button first by delaying redirect
-    if (!connected) {
-      removeWalletCookie();
-      setShouldRedirect(false);
-      return;
-    }
-
-    if (publicKey) {
-      console.log('Setting wallet cookie:', publicKey.toString());
-      setWalletCookie(publicKey.toString());
-      // Set flag to redirect instead of redirecting immediately
-      setShouldRedirect(true);
-    }
-  }, [connected, publicKey]);
-
-  // Separate useEffect for redirection to ensure connect button is visible first
-  useEffect(() => {
-    let redirectTimer: NodeJS.Timeout;
+  // Clean direct navigation to dashboard
+  const goToDashboard = () => {
+    if (isNavigating) return; // Prevent multiple clicks
     
-    if (shouldRedirect && connected && publicKey) {
-      // Short delay to ensure the user sees the connection confirmation
-      redirectTimer = setTimeout(() => {
-        router.push('/dashboard');
-      }, 500);
-    }
+    console.log('⚡ Manual dashboard navigation triggered');
+    setIsNavigating(true);
     
-    return () => {
-      if (redirectTimer) clearTimeout(redirectTimer);
-    };
-  }, [shouldRedirect, connected, publicKey, router]);
+    // Add a brief pre-animation effect to the button
+    setTimeout(() => {
+      // Reset animation flag to ensure it plays
+      localStorage.removeItem('hyperspeedAnimationCompleted');
+      
+      // Trigger hyperspace animation
+      setShowHyperspace(true);
+      
+      // Clear any existing redirect flags
+      localStorage.removeItem('preventLoginRedirect');
+      localStorage.removeItem('walletConnected');
+      
+      console.log('⚡ Animation triggered, flags cleared for clean navigation');
+    }, 300); // Small delay for button animation
+  };
+
+  // Auto-redirect when wallet is connected - remove this automatic redirect
+  useEffect(() => {
+    // Clear previous animation completion flag when wallet connects
+    if (connected) {
+      localStorage.removeItem('hyperspeedAnimationCompleted');
+    }
+  }, [connected]);
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-gray-900 to-gray-800 text-white">
-      <div className="max-w-md w-full px-6 py-8 bg-gray-800/50 backdrop-blur-sm rounded-xl shadow-2xl border border-gray-700">
-        <h1 className="text-4xl font-bold mb-2 text-center bg-gradient-to-r from-cyan-400 to-blue-400 text-transparent bg-clip-text">
-          EONIC Vault
-        </h1>
-        <p className="text-gray-400 mb-8 text-center">
-          Connect your wallet to access your digital assets
-        </p>
-        
-        <div className="flex justify-center mb-6">
-          <WalletButton className="!py-3 !px-6 !text-lg !font-medium" />
-        </div>
-        
-        {connected && (
-          <div className="text-center text-green-400 mb-4">
-            <p>Connected! Redirecting to dashboard...</p>
-          </div>
-        )}
-        
-        {detectedWallets.length > 0 && (
-          <div className="text-center text-sm text-gray-400 mt-4">
-            <p>Detected wallet{detectedWallets.length > 1 ? 's' : ''}: {detectedWallets.join(', ')}</p>
-          </div>
-        )}
-        
-        {detectedWallets.length === 0 && !connected && (
-          <div className="mt-4 p-4 bg-indigo-900/30 rounded-lg border border-indigo-800">
-            <p className="text-sm text-center text-gray-300">
-              No wallet detected. We support Phantom, Solflare, and other Solana wallets.
-            </p>
-            <div className="flex justify-center gap-3 mt-3">
-              <a 
-                href="https://phantom.app/download" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-xs py-1 px-2 bg-indigo-600 rounded hover:bg-indigo-700 transition-colors"
-              >
-                Get Phantom
-              </a>
-              <a 
-                href="https://solflare.com" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-xs py-1 px-2 bg-indigo-600 rounded hover:bg-indigo-700 transition-colors"
-              >
-                Get Solflare
-              </a>
-            </div>
-          </div>
-        )}
+    <div className="relative w-full h-screen overflow-hidden bg-black text-white">
+      {/* Animated starfield background */}
+      <div className="absolute inset-0 z-0">
+        <div className="absolute w-full h-full bg-[url('/images/star-pattern.png')] bg-cover opacity-30 animate-pulse" 
+             style={{ animationDuration: '15s' }} />
       </div>
+      
+      {/* Orbital ring */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] border border-blue-500/20 rounded-full" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[520px] h-[520px] border border-blue-400/10 rounded-full animate-spin-slow" />
+      
+      {/* EONIC Core Ship */}
+      <motion.div
+        className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10"
+        animate={{ rotate: [0, 360] }}
+        transition={{ repeat: Infinity, duration: 20, ease: 'linear' }}
+      >
+        <motion.div
+          animate={{ scale: [1, 1.05, 1] }}
+          transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}
+        >
+          <Image
+            src="/images/eonic-core-ship.png"
+            alt="Eonic Core Ship"
+            width={160}
+            height={160}
+            priority
+            className="drop-shadow-[0_0_15px_rgba(59,130,246,0.5)]"
+          />
+        </motion.div>
+      </motion.div>
+      
+      {/* Energy beams from core ship to wallet ships */}
+      <svg className="absolute inset-0 w-full h-full z-5 opacity-30">
+        <defs>
+          <linearGradient id="beam-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.8" />
+            <stop offset="100%" stopColor="#3b82f6" stopOpacity="0.1" />
+          </linearGradient>
+        </defs>
+        
+        {walletShips.map((wallet, i) => {
+          // Hard-coded path values to avoid client-side window reference
+          const centerX = 500; // Approximate center X
+          const centerY = 300; // Approximate center Y
+          const pathPoints = [
+            { x: centerX, y: centerY - 100 }, // Core ship position
+            { x: centerX + (i % 2 === 0 ? 150 : -150), y: centerY + (i < 2 ? -80 : 80) } // Ship position
+          ];
+          
+          return (
+            <motion.path
+              key={wallet.name}
+              d={`M ${pathPoints[0].x},${pathPoints[0].y} Q ${centerX + (i % 2 === 0 ? 50 : -50)},${centerY} ${pathPoints[1].x},${pathPoints[1].y}`}
+              stroke="url(#beam-gradient)"
+              strokeWidth="1"
+              fill="none"
+              strokeDasharray="3,3"
+              initial={{ opacity: 0.3 }}
+              animate={{ opacity: [0.3, 0.6, 0.3] }}
+              transition={{ duration: 2, delay: i * 0.5, repeat: Infinity }}
+            />
+          );
+        })}
+      </svg>
+
+      {/* Title & Instruction */}
+      <div className="absolute top-[58%] left-1/2 -translate-x-1/2 text-center z-10">
+        <motion.h1 
+          className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-600 tracking-wider mb-2"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+        >
+          EONIC VAULT
+        </motion.h1>
+        <motion.p 
+          className="text-sm text-blue-300 mt-1"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+        >
+          Connect your wallet to access the quantum vault
+        </motion.p>
+      </div>
+
+      {/* Wallet Connect Button */}
+      <div className="absolute top-[68%] left-1/2 -translate-x-1/2 z-30 flex flex-col items-center space-y-4">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5, delay: 0.4 }}
+        >
+          <WalletButton className="!py-3 !px-6 !text-lg !font-medium" />
+        </motion.div>
+        
+        {/* Dashboard Button (visible when connected) */}
+        <AnimatePresence>
+          {connected && (
+            <motion.button 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              whileTap={{ scale: 0.95 }}
+              whileHover={{ scale: 1.05, boxShadow: '0 0 15px rgba(34, 197, 94, 0.5)' }}
+              transition={{ duration: 0.3 }}
+              onClick={goToDashboard}
+              disabled={isNavigating}
+              className={`mt-4 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white py-3 px-8 rounded-lg text-lg font-medium transition-all ${isNavigating ? 'opacity-70 cursor-not-allowed animate-pulse' : ''}`}
+            >
+              {isNavigating ? 'Initializing Jump...' : 'Enter Vault'}
+            </motion.button>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* Wallet Ships orbiting with glow effects */}
+      {walletShips.map((wallet) => (
+        <motion.div
+          key={wallet.name}
+          className={`absolute ${wallet.orbit} z-20 cursor-pointer`}
+          whileHover={{ scale: 1.15, rotate: 3 }}
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ 
+            opacity: 1, 
+            scale: 1,
+            filter: `drop-shadow(0 0 5px ${wallet.color})`
+          }}
+          transition={{ duration: 0.5, delay: Math.random() * 0.5 }}
+          onClick={() => {
+            if (connected && !isNavigating) {
+              goToDashboard();
+            }
+          }}
+        >
+          <Image
+            src={wallet.logo}
+            alt={`${wallet.name} Ship`}
+            width={90}
+            height={90}
+            className={`hover:drop-shadow-[0_0_15px_${wallet.color}] transition duration-300`}
+          />
+          <p className="text-center text-xs mt-1 text-blue-200 font-medium">{wallet.name}</p>
+          {connected && (
+            <p className="text-center text-[10px] mt-0.5 text-green-300 animate-pulse">Click to launch</p>
+          )}
+        </motion.div>
+      ))}
+      
+      {/* Hyperspace transition overlay */}
+      {showHyperspace && (
+        <HyperspeedTransition 
+          onComplete={() => {
+            console.log('⚡ Hyperspace animation completed, navigating to dashboard');
+            router.push('/dashboard');
+          }} 
+        />
+      )}
     </div>
   );
 }

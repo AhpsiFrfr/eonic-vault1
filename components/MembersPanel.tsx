@@ -35,9 +35,17 @@ export function MembersPanel({ isOpen, onClose, onlineUsers, communityUsers }: M
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
   const handleUserClick = (user: User) => {
-    if (user.showBusinessCard) {
+    const profile = getMockProfile(user.wallet_address);
+    const hasBusinessCard = user.showBusinessCard || (profile && profile.show_business_card);
+    
+    if (hasBusinessCard) {
       setSelectedUser(user);
     }
+  };
+
+  const userHasBusinessCard = (user: User) => {
+    const profile = getMockProfile(user.wallet_address);
+    return user.showBusinessCard || (profile && profile.show_business_card);
   };
 
   return (
@@ -80,7 +88,7 @@ export function MembersPanel({ isOpen, onClose, onlineUsers, communityUsers }: M
                       animate={{ opacity: 1, x: 0 }}
                       onClick={() => handleUserClick(user)}
                       className={`flex items-center space-x-2 px-2 py-1.5 rounded-lg hover:bg-white/5 ${
-                        user.showBusinessCard ? 'cursor-pointer' : ''
+                        userHasBusinessCard(user) ? 'cursor-pointer' : ''
                       }`}
                     >
                       <div className="relative">
@@ -106,7 +114,7 @@ export function MembersPanel({ isOpen, onClose, onlineUsers, communityUsers }: M
                         <span className="text-sm text-white truncate block">
                           {user.username}
                         </span>
-                        {user.showBusinessCard && (
+                        {userHasBusinessCard(user) && (
                           <span className="text-xs text-indigo-400">View Profile</span>
                         )}
                       </div>
@@ -126,7 +134,7 @@ export function MembersPanel({ isOpen, onClose, onlineUsers, communityUsers }: M
                       animate={{ opacity: 1, x: 0 }}
                       onClick={() => handleUserClick(user)}
                       className={`flex items-center space-x-2 px-2 py-1.5 rounded-lg hover:bg-white/5 ${
-                        user.showBusinessCard ? 'cursor-pointer' : ''
+                        userHasBusinessCard(user) ? 'cursor-pointer' : ''
                       }`}
                     >
                       <div className="w-8 h-8 rounded-full bg-gray-500/20 flex items-center justify-center overflow-hidden">
@@ -149,7 +157,7 @@ export function MembersPanel({ isOpen, onClose, onlineUsers, communityUsers }: M
                         <span className="text-sm text-gray-400 truncate block">
                           {user.username}
                         </span>
-                        {user.showBusinessCard && (
+                        {userHasBusinessCard(user) && (
                           <span className="text-xs text-indigo-400">View Profile</span>
                         )}
                       </div>

@@ -1,8 +1,10 @@
+'use client';
+
 import { motion, AnimatePresence } from 'framer-motion';
 import { useReactionAnimation } from '../hooks/useReactionAnimation';
 import { BusinessCardPanel } from './BusinessCardPanel';
 import { useState, useEffect, useRef } from 'react';
-import { Heart, Reply, Edit3, Pin, Copy, Link, Share, Trash2, CheckCircle } from 'lucide-react';
+import { Heart, Reply, Edit3, Pin, Copy, Link, Share, Trash2, CheckCircle, MessageSquare, Image, Smile } from 'lucide-react';
 
 interface MessageBubbleProps {
   content: string;
@@ -30,6 +32,10 @@ interface MessageBubbleProps {
     };
   };
   senderAddress: string;
+  parentId?: string;
+  parentContent?: string;
+  replyCount?: number;
+  onViewThread?: (messageId: string) => void;
 }
 
 const reactionEmojis = ['❤️', '👍', '🙌', '😂', '😭', '🌭', '🔥'];
@@ -49,7 +55,11 @@ export function MessageBubble({
   isPinned,
   showBusinessCard,
   businessCard,
-  senderAddress
+  senderAddress,
+  parentId,
+  parentContent,
+  replyCount = 0,
+  onViewThread
 }: MessageBubbleProps) {
   const { triggerReaction } = useReactionAnimation();
   const [showProfile, setShowProfile] = useState(false);
@@ -114,6 +124,24 @@ export function MessageBubble({
   }, [content]);
 
   const handleReaction = (emoji: string, event: React.MouseEvent) => {
+    // Choose animation type based on emoji
+    let animationType: 'float' | 'burst' | 'bounce' | 'spin' = 'float';
+    
+    // Map specific emojis to animation types for more interesting effects
+    if (emoji === '🔥' || emoji === '❤️' || emoji === '😍') {
+      animationType = 'burst';
+    } else if (emoji === '😂' || emoji === '🤣' || emoji === '😭') {
+      animationType = 'bounce';
+    } else if (emoji === '🙌' || emoji === '👍' || emoji === '🎉') {
+      animationType = 'spin';
+    }
+    
+    // Pass the animation type to the reaction handler
+    const reactionEvent = {
+      ...event,
+      animationType
+    };
+    
     triggerReaction(messageId, emoji, event);
     onReaction(emoji, event);
     setShowReactionBar(false);
@@ -187,6 +215,25 @@ export function MessageBubble({
         exit={{ opacity: 0, y: -20 }}
         className={`group relative flex flex-col ${isOwn ? 'items-end' : 'items-start'} max-w-full w-[100%] md:max-w-[75%] mb-6`}
       >
+        {/* Parent message reference (if this is a reply) */}
+        {parentId && parentContent && (
+          <motion.div 
+            initial={{ opacity: 0.5 }}
+            whileHover={{ opacity: 1 }}
+            className={`
+              ${isOwn ? 'text-right' : 'text-left'}
+              px-4 py-1 mb-1 text-xs text-gray-400
+              cursor-pointer hover:underline
+            `}
+            onClick={() => onViewThread && onViewThread(parentId)}
+          >
+            <span className="flex items-center gap-1">
+              <Reply className="h-3 w-3" />
+              Replying to: {parentContent.length > 50 ? parentContent.substring(0, 50) + "..." : parentContent}
+            </span>
+          </motion.div>
+        )}
+      
         <motion.div
           ref={messageRef}
           whileHover={{ scale: 1.01 }}
@@ -231,7 +278,6 @@ export function MessageBubble({
                 alt="GIF" 
                 className="max-w-full h-auto object-contain rounded-lg"
                 onError={(e) => {
-                  console.error("Error loading GIF:", e);
                   // Try alternative URL format if the original fails
                   if (!gifUrl.includes('media.giphy.com')) {
                     // Extract ID from various formats and try media.giphy.com format
@@ -266,33 +312,23 @@ export function MessageBubble({
             {isPinned && <Pin className="w-3 h-3" />}
           </div>
 
-          {/* Reaction buttons - position fixed above the message */}
-          <div
-            className={`
-              absolute ${isOwn ? 'right-0' : 'left-0'} bottom-full mb-2
-              hidden group-hover:flex items-center space-x-1 p-1
-              bg-[#1E1E2F]/90 backdrop-blur-sm rounded-full
-              border border-white/5 shadow-lg z-10
-            `}
-          >
-            {reactionEmojis.map((emoji) => (
-              <motion.button
-                key={emoji}
-                whileHover={{ scale: 1.2 }}
-                whileTap={{ scale: 0.9 }}
-                onClick={(e) => handleReaction(emoji, e)}
-                className={`
-                  p-1.5 rounded-full transition-colors
-                  hover:bg-white/10
-                  ${reactions && reactions.includes(emoji) ? 'bg-white/20' : ''}
-                `}
+          {/* Thread indicator (if this message has replies) */}
+          {replyCount > 0 && (
+            <div className="mt-2 flex items-center text-xs text-gray-400 hover:text-white cursor-pointer transition-colors">
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onViewThread && onViewThread(messageId);
+                }}
+                className="flex items-center gap-1 hover:bg-white/10 px-2 py-1 rounded"
               >
-                {emoji}
-              </motion.button>
-            ))}
-          </div>
+                <MessageSquare className="h-3 w-3" />
+                {replyCount} {replyCount === 1 ? 'reply' : 'replies'} - View thread
+              </button>
+            </div>
+          )}
 
-          {/* Active reactions */}
+          {/* Active reactions - Updated with grouping and animation */}
           {reactions && reactions.length > 0 && (
             <motion.div
               initial={{ opacity: 0, scale: 0.8 }}
@@ -304,22 +340,41 @@ export function MessageBubble({
                 ${isOwn ? 'justify-end' : 'justify-start'}
               `}
             >
-              {reactions.map((emoji, index) => (
-                <motion.button
-                  key={`${emoji}-${index}`}
-                  whileHover={{ scale: 1.2 }}
-                  whileTap={{ scale: 0.9 }}
-                  onClick={(e) => handleReaction(emoji, e)}
-                  className="p-1 hover:bg-white/10 rounded-full transition-colors"
-                >
-                  {emoji}
-                </motion.button>
-              ))}
+              {Array.from(new Set(reactions)).map((emoji) => {
+                const count = reactions.filter(r => r === emoji).length;
+                return (
+                  <motion.button
+                    key={emoji}
+                    whileHover={{ scale: 1.2 }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={(e) => handleReaction(emoji, e)}
+                    className="flex items-center px-2 py-1 hover:bg-white/10 rounded-full transition-colors"
+                    layout
+                  >
+                    <motion.span 
+                      initial={{ scale: 0.5 }}
+                      animate={{ scale: 1 }}
+                      transition={{ type: "spring", stiffness: 300, damping: 10 }}
+                    >
+                      {emoji}
+                    </motion.span>
+                    {count > 1 && (
+                      <motion.span 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="ml-1 text-xs bg-white/10 px-1 rounded-full"
+                      >
+                        {count}
+                      </motion.span>
+                    )}
+                  </motion.button>
+                );
+              })}
             </motion.div>
           )}
         </motion.div>
 
-        {/* Reaction bar */}
+        {/* Reaction bar - Updated with better animations */}
         <AnimatePresence>
           {showReactionBar && (
             <motion.div
@@ -327,13 +382,17 @@ export function MessageBubble({
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
+              transition={{ type: "spring", stiffness: 400, damping: 25 }}
               className="absolute top-0 left-0 right-0 mx-auto w-max bg-[#1A1A2E] rounded-full shadow-lg border border-white/10 p-1 flex items-center space-x-1 z-50"
             >
-              {reactionEmojis.map((emoji) => (
+              {reactionEmojis.map((emoji, index) => (
                 <motion.button
                   key={emoji}
                   whileHover={{ scale: 1.2 }}
                   whileTap={{ scale: 0.9 }}
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: index * 0.05 }}
                   onClick={(e) => handleReaction(emoji, e)}
                   className="p-2 hover:bg-white/10 rounded-full text-xl transition-colors"
                 >
@@ -375,6 +434,40 @@ export function MessageBubble({
                   <Reply className="w-4 h-4 mr-2" />
                   Reply
                 </button>
+                <button 
+                  className="flex items-center w-full px-4 py-2 text-left text-white hover:bg-indigo-500/20 transition-colors"
+                  onClick={() => {
+                    setShowContextMenu(false);
+                    // This would open a GIF picker in a real implementation
+                    alert("GIF picker would open here!");
+                  }}
+                >
+                  <Image className="w-4 h-4 mr-2" />
+                  Send GIF
+                </button>
+                <button 
+                  className="flex items-center w-full px-4 py-2 text-left text-white hover:bg-indigo-500/20 transition-colors"
+                  onClick={() => {
+                    setShowContextMenu(false);
+                    // This would open an emoji picker in a real implementation
+                    alert("Emoji picker would open here!");
+                  }}
+                >
+                  <Smile className="w-4 h-4 mr-2" />
+                  Add Emoji
+                </button>
+                {replyCount > 0 && (
+                  <button 
+                    className="flex items-center w-full px-4 py-2 text-left text-white hover:bg-indigo-500/20 transition-colors"
+                    onClick={() => {
+                      onViewThread && onViewThread(messageId);
+                      setShowContextMenu(false);
+                    }}
+                  >
+                    <MessageSquare className="w-4 h-4 mr-2" />
+                    View thread
+                  </button>
+                )}
               </div>
 
               {isOwn && (

@@ -1,136 +1,53 @@
 'use client';
 
-import { useWallet } from '@solana/wallet-adapter-react';
-import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import Link from 'next/link';
-import { getMockProfile, createDefaultProfile, UserMetrics } from '../../utils/mock-data';
+import { motion } from "framer-motion";
+import HoldingsWidget from "../../components/widgets/HoldingsWidget";
+import XPMeter from "../../components/widgets/XPMeter";
+import TimepieceDisplay from "../../components/widgets/TimepieceDisplay";
+import TokenChart from "../../components/widgets/TokenChart";
+import NFTGallery from "../../components/widgets/NFTGallery";
+import NewsFeed from "../../components/widgets/NewsFeed";
+import Announcements from "../../components/widgets/Announcements";
+import TokenBalanceWidget from "../../components/widgets/TokenBalanceWidget";
+import TimepieceEvolutionWidget from "../../components/widgets/TimepieceEvolutionWidget";
+import VaultNotificationsWidget from "../../components/widgets/VaultNotificationsWidget";
+import RecentActivityWidget from "../../components/widgets/RecentActivityWidget";
+import ENICAssistantWidget from "../../components/widgets/ENICAssistantWidget";
 
-// Dashboard Components
-interface DashboardCardProps {
-  title: string;
-  value: string;
-  subtitle?: string;
-}
-
-const DashboardCard = ({ title, value, subtitle = '' }: DashboardCardProps) => (
-  <motion.div 
-    whileHover={{ y: -5, boxShadow: '0 10px 25px rgba(79, 70, 229, 0.2)' }}
-    className="bg-gradient-to-br from-[#1E1E2F] to-[#252538] p-5 rounded-xl border border-indigo-500/20 hover:border-indigo-500/50 transition-all"
-  >
-    <h3 className="text-gray-400 text-sm font-medium mb-1">{title}</h3>
-    <p className="text-2xl font-bold text-white">{value}</p>
-    {subtitle && <p className="text-indigo-400 text-sm mt-1">{subtitle}</p>}
-  </motion.div>
-);
-
-interface QuickLinkProps {
-  label: string;
-  href: string;
-  icon: string;
-}
-
-const QuickLink = ({ label, href, icon }: QuickLinkProps) => (
-  <Link href={href}>
-    <motion.div 
-      whileHover={{ scale: 1.03 }}
-      whileTap={{ scale: 0.98 }}
-      className="flex items-center gap-3 p-4 bg-[#1E1E2F] rounded-lg border border-indigo-500/20 hover:border-indigo-500/50 transition-all cursor-pointer"
-    >
-      <div className="text-2xl">{icon}</div>
-      <span className="font-medium">{label}</span>
-    </motion.div>
-  </Link>
-);
-
-export default function Dashboard() {
-  const { publicKey } = useWallet();
-  const walletAddress = publicKey?.toString() || '';
-  const [displayName, setDisplayName] = useState('Vault Member');
-  const [userMetrics, setUserMetrics] = useState<UserMetrics>({
-    level: 1,
-    currentXp: 0,
-    eonicBalance: 0,
-    referralCount: 0,
-    hasTimepiece: false,
-    timepieceImageUrl: '/timepiece-nft.png',
-    timepieceStage: 'Genesis',
-    nftXp: 0
-  });
-
-  useEffect(() => {
-    // In a real application, you would fetch user data from your API
-    const fetchUserData = async () => {
-      if (walletAddress) {
-        // Try to get profile from mock data, or create a default one
-        const profile = getMockProfile(walletAddress) || createDefaultProfile(walletAddress);
-        
-        // Update display name
-        setDisplayName(profile.display_name || 'Vault Member');
-        
-        // Set mock metrics
-        setUserMetrics({
-          level: 3,
-          currentXp: 2450,
-          eonicBalance: 125,
-          referralCount: 2,
-          hasTimepiece: true,
-          timepieceImageUrl: profile.timepiece_url || '/timepiece-nft.png',
-          timepieceStage: 'Genesis',
-          nftXp: 750
-        });
-        
-        console.log('[MOCK] Dashboard loaded timepiece image:', profile.timepiece_url || '/timepiece-nft.png');
-      }
-    };
-
-    fetchUserData();
-  }, [walletAddress]);
-
-  const { 
-    level, 
-    currentXp, 
-    eonicBalance, 
-    referralCount,
-    hasTimepiece,
-    timepieceImageUrl,
-    timepieceStage,
-    nftXp
-  } = userMetrics;
-
+export default function DashboardPage() {
   return (
-    <div className="w-full px-4 py-6 space-y-6 text-white">
-      <h2 className="text-2xl font-bold mb-6">Welcome Back to the Vault, {displayName}!</h2>
+    <motion.div
+      className="p-4"
+      initial={{ opacity: 0, scale: 0.96 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 1.2, ease: "easeOut" }}
+    >
+      <h1 className="text-2xl font-bold text-white mb-6">Dashboard</h1>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-        <DashboardCard title="Current Level" value={`Level ${level}`} subtitle={`${currentXp} XP`} />
-        <DashboardCard title="$EONIC Held" value={`${eonicBalance} $EONIC`} />
-        <DashboardCard title="Referrals" value={`${referralCount} Activated`} />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <TokenBalanceWidget />
+        <TimepieceEvolutionWidget />
+        <ENICAssistantWidget />
+        <VaultNotificationsWidget />
+        <RecentActivityWidget />
       </div>
 
-      {hasTimepiece && (
-        <div className="mt-6 bg-gradient-to-r from-indigo-800 to-violet-700 rounded-xl p-4">
-          <h3 className="text-lg font-semibold mb-2">Timepiece Evolution</h3>
-          <img 
-            src={timepieceImageUrl} 
-            alt="Your NFT Timepiece" 
-            className="w-full max-w-sm rounded-lg" 
-            onError={(e) => {
-              // Fallback if the image fails to load
-              console.error('Failed to load timepiece image, using fallback');
-              // Use our SVG placeholder
-              e.currentTarget.src = '/timepiece-nft.svg';
-            }}
-          />
-          <p className="text-sm mt-2">Stage: {timepieceStage} • XP: {nftXp}</p>
-        </div>
-      )}
-
-      <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-        <QuickLink label="Customize EON-ID" href="/dashboard/eon-id" icon="🧬" />
-        <QuickLink label="Enter Community" href="/dashboard/community" icon="💬" />
-        <QuickLink label="Claim Rewards" href="/dashboard/vault" icon="🎁" />
+      <h2 className="text-xl font-bold text-white mt-8 mb-4">Legacy Widgets</h2>
+      <div className="widget-row opacity-50">
+        <HoldingsWidget />
+        <XPMeter />
+        <TimepieceDisplay />
       </div>
-    </div>
+
+      <div className="widget-row opacity-50">
+        <TokenChart />
+        <NFTGallery />
+      </div>
+
+      <div className="widget-row opacity-50">
+        <NewsFeed />
+        <Announcements />
+      </div>
+    </motion.div>
   );
 }

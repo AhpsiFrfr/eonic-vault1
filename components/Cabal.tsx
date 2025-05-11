@@ -1,5 +1,6 @@
+import React, { useState, useEffect } from 'react';
 import { useWallet, useConnection } from '@solana/wallet-adapter-react';
-import React, { useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
 import { verifyEonicNFT } from '../utils/nft';
 import { createProposal, getActiveProposals, castVote, getExclusiveContent, getUserAccessLevel, Proposal, ExclusiveContent } from '../utils/cabal';
 
@@ -17,8 +18,12 @@ export const Cabal: React.FC = () => {
 
   useEffect(() => {
     async function checkAccess() {
-      if (!publicKey) return;
-      
+      if (!publicKey) {
+        setHasAccess(false);
+        setLoading(false);
+        return;
+      }
+
       setLoading(true);
       try {
         const { verified, notLaunched } = await verifyEonicNFT(connection, publicKey.toString());
@@ -39,7 +44,8 @@ export const Cabal: React.FC = () => {
           setExclusiveContent(content);
         }
       } catch (error) {
-        console.error('Error verifying access:', error);
+        // Silent error handling
+        setHasAccess(false);
       } finally {
         setLoading(false);
       }
@@ -64,7 +70,7 @@ export const Cabal: React.FC = () => {
       const activeProposals = await getActiveProposals();
       setProposals(activeProposals);
     } catch (error) {
-      console.error('Error creating proposal:', error);
+      // Silent error handling - could add UI error indicator here
     }
   };
 
@@ -78,7 +84,7 @@ export const Cabal: React.FC = () => {
       const activeProposals = await getActiveProposals();
       setProposals(activeProposals);
     } catch (error) {
-      console.error('Error casting vote:', error);
+      // Silent error handling - could add UI error indicator here
     }
   };
 

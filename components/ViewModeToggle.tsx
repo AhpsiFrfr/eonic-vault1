@@ -33,7 +33,7 @@ export function ViewModeToggle({ onViewModeChange }: ViewModeToggleProps) {
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center space-x-2 px-4 py-2 bg-gray-800 text-gray-200 rounded-lg hover:bg-gray-700 transition-colors"
       >
-        <span>View: {selectedMode.charAt(0).toUpperCase() + selectedMode.slice(1)}</span>
+        <span>{selectedMode === 'web' ? 'Desktop' : 'Mobile'}</span>
         <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
@@ -45,7 +45,7 @@ export function ViewModeToggle({ onViewModeChange }: ViewModeToggleProps) {
               selectedMode === 'web' ? 'bg-indigo-600 text-white' : 'text-gray-200'
             }`}
           >
-            Web
+            Desktop
           </button>
           <button
             onClick={() => handleModeChange('mobile')}

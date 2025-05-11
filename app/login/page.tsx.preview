@@ -1,0 +1,71 @@
+'use client';
+
+import { useWallet } from '@solana/wallet-adapter-react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { setWalletCookie, removeWalletCookie } from '../../utils/auth';
+import { WalletConnector } from '../../components/animations/WalletConnector';
+
+export default function Login() {
+  const { connected, connecting, publicKey, disconnect } = useWallet();
+  const router = useRouter();
+  const [detectedWallets, setDetectedWallets] = useState<string[]>([]);
+  const [shouldRedirect, setShouldRedirect] = useState(false);
+
+  useEffect(() => {
+    // Detect installed wallets
+    if (typeof window !== 'undefined') {
+      const detected: string[] = [];
+      
+      if (window.hasOwnProperty('solana') && window.solana?.isPhantom) {
+        detected.push('Phantom');
+      }
+      
+      if (window.hasOwnProperty('solflare')) {
+        detected.push('Solflare');
+      }
+      
+      setDetectedWallets(detected);
+    }
+  }, []);
+
+  useEffect(() => {
+    // Always display the connect button first by delaying redirect
+    if (!connected) {
+      removeWalletCookie();
+      setShouldRedirect(false);
+      return;
+    }
+
+    if (publicKey) {
+      console.log('Setting wallet cookie:', publicKey.toString());
+      setWalletCookie(publicKey.toString());
+      // Set flag to redirect instead of redirecting immediately
+      setShouldRedirect(true);
+    }
+  }, [connected, publicKey]);
+
+  // Separate useEffect for redirection to ensure connect button is visible first
+  useEffect(() => {
+    let redirectTimer: NodeJS.Timeout;
+    
+    if (shouldRedirect && connected && publicKey) {
+      // Short delay to ensure the user sees the connection confirmation
+      redirectTimer = setTimeout(() => {
+        router.push('/dashboard');
+      }, 500);
+    }
+    
+    return () => {
+      if (redirectTimer) clearTimeout(redirectTimer);
+    };
+  }, [shouldRedirect, connected, publicKey, router]);
+
+  return (
+    <WalletConnector 
+      detectedWallets={detectedWallets}
+      isConnected={connected}
+      onConnect={() => {}}
+    />
+  );
+} 

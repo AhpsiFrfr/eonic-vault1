@@ -1,0 +1,56 @@
+'use client';
+
+import { useWallet } from '@solana/wallet-adapter-react';
+import { useState, useEffect } from 'react';
+import { getMockProfile, createDefaultProfile, UserMetrics } from '../../utils/mock-data';
+import { DimensionalDashboard } from '../../components/animations/DimensionalDashboard';
+
+export default function Dashboard() {
+  const { publicKey } = useWallet();
+  const walletAddress = publicKey?.toString() || '';
+  const [displayName, setDisplayName] = useState('Vault Member');
+  const [userMetrics, setUserMetrics] = useState<UserMetrics>({
+    level: 1,
+    currentXp: 0,
+    eonicBalance: 0,
+    referralCount: 0,
+    hasTimepiece: false,
+    timepieceImageUrl: '/timepiece-nft.svg',
+    timepieceStage: 'Genesis',
+    nftXp: 0
+  });
+
+  useEffect(() => {
+    // In a real application, you would fetch user data from your API
+    const fetchUserData = async () => {
+      if (walletAddress) {
+        // Try to get profile from mock data, or create a default one
+        const profile = getMockProfile(walletAddress) || createDefaultProfile(walletAddress);
+        
+        // Update display name
+        setDisplayName(profile.display_name || 'Vault Member');
+        
+        // Set mock metrics
+        setUserMetrics({
+          level: 3,
+          currentXp: 2450,
+          eonicBalance: 125,
+          referralCount: 2,
+          hasTimepiece: true,
+          timepieceImageUrl: '/timepiece-nft.svg',
+          timepieceStage: 'Genesis',
+          nftXp: 750
+        });
+      }
+    };
+
+    fetchUserData();
+  }, [walletAddress]);
+
+  return (
+    <DimensionalDashboard
+      displayName={displayName}
+      userMetrics={userMetrics}
+    />
+  );
+} 

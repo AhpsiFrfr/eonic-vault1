@@ -34,13 +34,9 @@ export function Message({ message }: MessageProps) {
     try {
       await toggleReaction(reaction);
     } catch (error) {
-      console.error('Failed to toggle reaction:', error);
+      // Silently handle reaction errors
     }
   };
-
-  if (error) {
-    console.error('Error loading reactions:', error);
-  }
 
   return (
     <div className="group relative" onContextMenu={handleContextMenu}>

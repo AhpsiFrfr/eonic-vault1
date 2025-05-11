@@ -1,10 +1,15 @@
-import { useEffect, useState, useRef } from "react";
-import { Smile, Edit3, Trash2, Pin, CornerDownRight, Image, Users } from "lucide-react";
+import { useEffect, useState, useRef, useCallback } from "react";
+import { Smile, Edit3, Trash2, Pin, CornerDownRight, Image, Users, Search } from "lucide-react";
 import { motion, AnimatePresence } from 'framer-motion';
 import { MessageBubble } from "./MessageBubble";
 import { MembersPanel } from "./MembersPanel";
+import MessageSearch from "./MessageSearch";
 import { v4 as uuidv4 } from 'uuid';
 import { getMockProfile } from "../utils/mock-data";
+import { FileUpload } from './FileUpload';
+import { ReactionAnimationsContainer } from './ReactionAnimationsContainer';
+import { useReactionAnimation } from '../hooks/useReactionAnimation';
+import { GifPickerModal } from './GifPickerModal';
 
 // Mock data structure
 interface CommunityMessage {
@@ -164,6 +169,7 @@ const mockCommunityUsers = [
 
 export default function CommunityChat({ userWalletAddress, roomId, channel, viewMode = 'web' }: Props): JSX.Element {
   const [messages, setMessages] = useState<CommunityMessage[]>([]);
+  const [filteredMessages, setFilteredMessages] = useState<CommunityMessage[]>([]);
   const [pinnedMsg, setPinnedMsg] = useState<CommunityMessage | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -177,6 +183,8 @@ export default function CommunityChat({ userWalletAddress, roomId, channel, view
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showMembersPanel, setShowMembersPanel] = useState(false);
+  const [showSearchBox, setShowSearchBox] = useState(false);
+  const { triggerReaction, addReaction } = useReactionAnimation();
   
   // Load mock messages
   useEffect(() => {
@@ -290,6 +298,16 @@ export default function CommunityChat({ userWalletAddress, roomId, channel, view
     const msg = messages.find((m) => m.id === messageId);
     if (!msg) return;
 
+    // Manually trigger animation at center of screen
+    const centerX = window.innerWidth / 2;
+    const centerY = window.innerHeight / 2;
+    addReaction({
+      messageId,
+      emoji,
+      position: { x: centerX, y: centerY },
+      animationType: Math.random() > 0.5 ? 'burst' : 'spin'
+    });
+
     const newReactions = msg.reactions.includes(emoji)
       ? msg.reactions.filter((e) => e !== emoji)
       : [...msg.reactions, emoji];
@@ -324,6 +342,51 @@ export default function CommunityChat({ userWalletAddress, roomId, channel, view
     }
   };
 
+  // Handle search
+  const handleSearch = useCallback((query: string) => {
+    if (!query.trim()) {
+      setFilteredMessages(messages);
+      return;
+    }
+    
+    const q = query.toLowerCase();
+    setFilteredMessages(
+      messages.filter(m => 
+        m.content.toLowerCase().includes(q) || 
+        m.sender_address.toLowerCase().includes(q)
+      )
+    );
+  }, [messages]);
+
+  // Update filtered messages when messages change
+  useEffect(() => {
+    setFilteredMessages(messages);
+  }, [messages]);
+
+  // Add this function to handle GIF selection
+  const handleGifSelect = (gifUrl: string) => {
+    setShowGifPicker(false);
+    
+    // Create a new message with the GIF
+    const newMessage: CommunityMessage = {
+      id: uuidv4(),
+      content: `GIF: ${gifUrl}`,
+      sender_address: userWalletAddress,
+      room: roomId,
+      channel: channel || 'community-chat',
+      created_at: new Date().toISOString(),
+      reactions: [],
+      pinned: false,
+      attachments: [],
+      thread_count: 0
+    };
+    
+    // Add to local state
+    setMessages(prev => [...prev, newMessage]);
+    setError("GIF added successfully!");
+    setTimeout(() => setError(null), 2000);
+  };
+
   return (
     <div className={`flex flex-col h-full bg-[#0F0F1A] relative ${viewMode === 'mobile' ? 'max-w-[375px] mx-auto' : ''}`}>
       {/* Header with members toggle */}
@@ -332,6 +395,48 @@ export default function CommunityChat({ userWalletAddress, roomId, channel, view
           {roomId.charAt(0).toUpperCase() + roomId.slice(1)} Chat
         </h2>
         <div className="flex items-center space-x-3">
+          {/* Test button to demonstrate reaction animations */}
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => {
+              // Demo reactions with random emojis
+              const emojis = ['❤️', '👍', '🙌', '😂', '😭', '🌭', '🔥'];
+              const randomEmoji = emojis[Math.floor(Math.random() * emojis.length)];
+              if (messages.length > 0) {
+                const randomMsg = messages[Math.floor(Math.random() * messages.length)];
+                handleReaction(randomMsg.id, randomEmoji);
+              }
+            }}
+            className="p-2 rounded-lg transition-colors hover:bg-white/5 text-gray-400 hover:text-indigo-400"
+            title="Demo Reactions"
+          >
+            <span className="text-xl">😀</span>
+          </motion.button>
+          
+          {/* Test button to demonstrate GIF picker */}
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setShowGifPicker(true)}
+            className="p-2 rounded-lg transition-colors hover:bg-white/5 text-gray-400 hover:text-indigo-400"
+            title="Demo GIF Picker"
+          >
+            <span className="text-xl">🖼️</span>
+          </motion.button>
+          
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setShowSearchBox(!showSearchBox)}
+            className={`p-2 rounded-lg transition-colors ${
+              showSearchBox 
+                ? 'bg-indigo-500/20 text-indigo-400' 
+                : 'hover:bg-white/5 text-gray-400 hover:text-indigo-400'
+            }`}
+          >
+            <Search className="w-5 h-5" />
+          </motion.button>
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
@@ -346,6 +451,19 @@ export default function CommunityChat({ userWalletAddress, roomId, channel, view
           </motion.button>
         </div>
       </div>
+
+      {/* Search Box */}
+      <AnimatePresence>
+        {showSearchBox && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+          >
+            <MessageSearch onSearch={handleSearch} />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Error Message Toast */}
       <AnimatePresence>
@@ -424,14 +542,14 @@ export default function CommunityChat({ userWalletAddress, roomId, channel, view
               className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full"
             />
           </div>
-        ) : messages.length === 0 ? (
+        ) : filteredMessages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-64 text-gray-400">
-            <p className="mb-2">No messages yet</p>
-            <p className="text-sm">Be the first to start the conversation!</p>
+            <p className="mb-2">No messages found</p>
+            <p className="text-sm">Try a different search or clear your filter</p>
           </div>
         ) : (
           <AnimatePresence>
-            {messages.map((msg) => (
+            {filteredMessages.map((msg) => (
               <div key={msg.id} className="relative group mb-4">
                 <MessageBubble
                   messageId={msg.id}
@@ -492,30 +610,20 @@ export default function CommunityChat({ userWalletAddress, roomId, channel, view
               placeholder={editing ? "Edit message..." : "Type a message..."}
               className="flex-1 p-3 bg-[#1E1E2F]/80 border border-white/5 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
             />
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              type="button"
-              onClick={() => setError("Image sharing is disabled in mock mode")}
-              className="p-3 text-gray-400 hover:text-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded-xl transition-colors bg-[#1E1E2F]/80 border border-white/5"
-            >
-              <Image className="w-5 h-5" />
-            </motion.button>
-            <input
-              type="file"
-              ref={fileInputRef}
-              className="hidden"
-              accept="image/*,.pdf,.doc,.docx"
-            />
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              type="button"
-              onClick={() => setError("File uploads are disabled in mock mode")}
-              className="p-3 text-gray-400 hover:text-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded-xl transition-colors bg-[#1E1E2F]/80 border border-white/5"
-            >
-              📎
-            </motion.button>
+
+            <div className="flex items-center">
+              <div className="p-2 text-gray-400 hover:text-indigo-400 rounded-xl transition-colors bg-[#1E1E2F]/80 border border-white/5">
+                <FileUpload 
+                  onFileSelect={(files) => {
+                    // Handle file selection in mock mode by showing a preview toast
+                    const fileNames = Array.from(files).map(f => f.name).join(', ');
+                    setError(`Mock mode: Would upload ${fileNames}`);
+                    setTimeout(() => setError(null), 3000);
+                  }}
+                />
+              </div>
+            </div>
+
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -527,6 +635,19 @@ export default function CommunityChat({ userWalletAddress, roomId, channel, view
           </div>
         </form>
       </div>
+
+      {/* Reaction animations container */}
+      <ReactionAnimationsContainer />
+
+      {/* Add GIF Picker Modal */}
+      <AnimatePresence>
+        {showGifPicker && (
+          <GifPickerModal
+            onClose={() => setShowGifPicker(false)}
+            onSelect={handleGifSelect}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
