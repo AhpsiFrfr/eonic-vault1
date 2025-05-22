@@ -18,7 +18,7 @@ export const AnimatedTimepiece: React.FC<AnimatedTimepieceProps> = ({
   glowIntensity = 10,
   rotationSpeed = 10,
   pulseSpeed = 3,
-  imagePath = '/timepiece-nft.svg',
+  imagePath = '/images/timepiece-nft.png',
   onClick,
   isActive = false,
 }) => {

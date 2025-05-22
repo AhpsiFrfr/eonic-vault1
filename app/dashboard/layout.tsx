@@ -17,6 +17,7 @@ const navItems = [
   { name: 'Vault', href: '/dashboard/vault' },
   { name: 'Community', href: '/dashboard/community' },
   { name: 'EON-ID', href: '/dashboard/eon-id' },
+  { name: 'Dev Vault', href: '/dev-hq/overview' },
 ];
 
 const sidebarVariants = {
@@ -34,7 +35,7 @@ const sidebarVariants = {
 
 const ProfileSection = ({ walletAddress }: { walletAddress: string }) => {
   const [displayName, setDisplayName] = useState('Vault Member');
-  const [avatarUrl, setAvatarUrl] = useState('/default-avatar.png');
+  const [avatarUrl, setAvatarUrl] = useState('/images/avatars/default.svg');
   const [refreshKey, setRefreshKey] = useState(0);
   const pathname = usePathname() || '';
   const isOnDashboard = pathname === '/dashboard';
@@ -53,7 +54,7 @@ const ProfileSection = ({ walletAddress }: { walletAddress: string }) => {
       });
       
       setDisplayName(profile.display_name || 'Vault Member');
-      setAvatarUrl(profile.avatar_url || '/default-avatar.png');
+      setAvatarUrl(profile.avatar_url || '/images/avatars/default.svg');
       setRefreshKey(prev => prev + 1);
     }
   }, [walletAddress, displayName, avatarUrl]);
@@ -89,7 +90,7 @@ const ProfileSection = ({ walletAddress }: { walletAddress: string }) => {
             <div className="w-full h-full bg-indigo-900/50">
               <Image 
                 key={refreshKey}
-                src={avatarUrl || '/default-avatar.png'}
+                src={avatarUrl || '/images/avatars/default.svg'}
                 alt={displayName}
                 width={48}
                 height={48}

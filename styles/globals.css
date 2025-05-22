@@ -17,3 +17,34 @@ body {
   )
   rgb(var(--background-start-rgb));
 }
+
+.glow-text {
+  text-shadow: 0 0 4px rgba(0, 212, 255, 0.6), 0 0 12px rgba(0, 212, 255, 0.4);
+}
+
+@font-face {
+  font-family: 'Orbitron';
+  src: url('/fonts/Orbitron-Regular.woff2') format('woff2'),
+       url('/fonts/Orbitron-Regular.woff') format('woff');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Orbitron';
+  src: url('/fonts/Orbitron-Medium.woff2') format('woff2'),
+       url('/fonts/Orbitron-Medium.woff') format('woff');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Orbitron';
+  src: url('/fonts/Orbitron-Bold.woff2') format('woff2'),
+       url('/fonts/Orbitron-Bold.woff') format('woff');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}

@@ -1,27 +1,41 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useProfile } from '@/hooks/useProfile';
 
 interface XPLevelCardProps {
   userWalletAddress?: string;
 }
 
 export function XPLevelCard({ userWalletAddress }: XPLevelCardProps) {
-  const [level, setLevel] = useState(1);
-  const [xp, setXp] = useState(0);
-  const [nextLevelXp, setNextLevelXp] = useState(100);
+  const { profile, isLoading } = useProfile();
 
-  useEffect(() => {
-    if (userWalletAddress) {
-      // Mock data - this would come from an API in production
-      setLevel(3);
-      setXp(275);
-      setNextLevelXp(400);
-    }
-  }, [userWalletAddress]);
+  // Calculate level based on XP (this could be moved to a utility function)
+  const calculateLevel = (xp: number) => {
+    return Math.floor(xp / 100) + 1;
+  };
 
-  // Calculate progress percentage
-  const progressPercent = Math.min(100, Math.floor((xp / nextLevelXp) * 100));
+  const xp = profile?.timepiece_xp || 0;
+  const level = calculateLevel(xp);
+  const nextLevelXp = level * 100;
+  const progressPercent = Math.min(100, Math.floor((xp % 100) * 100 / 100));
+
+  if (isLoading) {
+    return (
+      <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
+        <h3 className="text-sm text-gray-400 mb-1">XP Level</h3>
+        <div className="animate-pulse">
+          <div className="flex items-center mb-2">
+            <div className="bg-gray-700 w-10 h-10 rounded-full mr-3"></div>
+            <div>
+              <div className="h-4 bg-gray-700 rounded w-20 mb-1"></div>
+              <div className="h-3 bg-gray-700 rounded w-24"></div>
+            </div>
+          </div>
+          <div className="h-2 bg-gray-700 rounded-full"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">

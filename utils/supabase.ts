@@ -1,6 +1,78 @@
 // Mock implementation for testing purposes
 // In a production environment, this would use the actual Supabase client
 
+import { createClient } from '@supabase/supabase-js';
+import { UserProfile } from './user';
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
+export const supabase = createClient(supabaseUrl, supabaseKey);
+
+// Helper function to create a profile
+export async function createProfile(walletAddress: string, data: Partial<UserProfile>) {
+  const timestamp = new Date().toISOString();
+  const newProfile = {
+    wallet_address: walletAddress,
+    display_name: `User-${walletAddress.substring(0, 6)}`,
+    title: 'EONIC Explorer',
+    bio: '',
+    wallet_tagline: '',
+    avatar_url: '/images/avatars/default.svg',
+    widget_list: ['display_name', 'timepiece', 'xp_level', 'nft_gallery'],
+    is_public: true,
+    timepiece_url: '/images/timepiece-nft.png',
+    timepiece_stage: 'Genesis',
+    timepiece_xp: 0,
+    created_at: timestamp,
+    updated_at: timestamp,
+    ...data
+  };
+
+  const { data: profile, error } = await supabase
+    .from('profiles')
+    .insert([newProfile])
+    .select()
+    .single();
+
+  if (error) throw error;
+  return profile;
+}
+
+// Helper function to update a profile
+export async function updateProfile(walletAddress: string, updates: Partial<UserProfile>) {
+  const { data, error } = await supabase
+    .from('profiles')
+    .update({
+      ...updates,
+      updated_at: new Date().toISOString()
+    })
+    .eq('wallet_address', walletAddress)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+// Helper function to get a profile
+export async function getProfile(walletAddress: string) {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('wallet_address', walletAddress)
+    .single();
+
+  if (error) {
+    if (error.code === 'PGRST116') { // No rows returned
+      return await createProfile(walletAddress, {});
+    }
+    throw error;
+  }
+
+  return data;
+}
+
 const inMemoryProfiles = new Map<string, any>();
 const inMemoryStorage = new Map<string, any>();
 
@@ -98,7 +170,7 @@ export const createSupabaseClient = (walletAddress?: string) => {
 };
 
 // Default client for convenience
-export const supabase = createSupabaseClient();
+export const supabaseMock = createSupabaseClient();
 
 // Additional utility mock functions
 
@@ -177,7 +249,7 @@ export async function sendMessage(
 
   try {
     // First insert the message
-    const { data: message, error: messageError } = await supabase
+    const { data: message, error: messageError } = await supabaseMock
       .from('messages')
       .insert([{ 
         content: content.trim(), 
@@ -206,19 +278,19 @@ export async function sendMessage(
       const attachmentPromises = attachments.map(async (file) => {
         try {
         // Upload file to storage
-        const { data: fileData, error: uploadError } = await supabase.storage
+        const { data: fileData, error: uploadError } = await supabaseMock.storage
           .from('attachments')
           .upload(`${message.id}/${file.name}`, file);
 
         if (uploadError) throw uploadError;
 
         // Get public URL
-        const { data: { publicUrl } } = supabase.storage
+        const { data: { publicUrl } } = supabaseMock.storage
           .from('attachments')
           .getPublicUrl(`${message.id}/${file.name}`);
 
         // Create attachment record
-        const { error: attachError } = await supabase
+        const { error: attachError } = await supabaseMock
           .from('message_attachments')
           .insert([{
             message_id: message.id,
@@ -244,7 +316,7 @@ export async function sendMessage(
     }
 
     // Fetch the complete message with attachments and reactions
-    const { data: completeMessage, error: fetchError } = await supabase
+    const { data: completeMessage, error: fetchError } = await supabaseMock
       .from('messages')
       .select(`
         *,
@@ -275,7 +347,7 @@ export function subscribeToDirectMessages(
   recipientAddress: string,
   callback: (message: DirectMessage) => void
 ) {
-  const channel = supabase.channel(`dm:${[senderAddress, recipientAddress].sort().join(':')}`);
+  const channel = supabaseMock.channel(`dm:${[senderAddress, recipientAddress].sort().join(':')}`);
 
   // Subscribe to DM changes
   channel
@@ -289,7 +361,7 @@ export function subscribeToDirectMessages(
       },
       async (payload) => {
         const message = payload.new as DirectMessage;
-        const { data: completeMessage } = await supabase
+        const { data: completeMessage } = await supabaseMock
           .from('direct_messages')
           .select('*, attachments:direct_message_attachments(*)')
           .eq('id', message.id)
@@ -310,7 +382,7 @@ export function subscribeToDirectMessages(
       },
       async (payload: RealtimePostgresChangesPayload<{ message_id: string }>) => {
         if (payload.new && 'message_id' in payload.new) {
-          const { data: message } = await supabase
+          const { data: message } = await supabaseMock
             .from('direct_messages')
             .select('*, attachments:direct_message_attachments(*)')
             .eq('id', payload.new.message_id)
@@ -331,7 +403,7 @@ export function subscribeToMessages(
   room: string = 'general',
   callback: (message: ChatMessage) => void
 ) {
-  const channel = supabase.channel('messages');
+  const channel = supabaseMock.channel('messages');
 
   // Subscribe to new messages
   channel
@@ -345,7 +417,7 @@ export function subscribeToMessages(
       },
       async (payload) => {
         const message = payload.new as ChatMessage;
-        const { data: completeMessage } = await supabase
+        const { data: completeMessage } = await supabaseMock
           .from('messages')
           .select(`
             *,
@@ -399,7 +471,7 @@ export async function getMessages(
   parentId?: string
 ): Promise<ChatMessage[]> {
   try {
-    const query = supabase
+    const query = supabaseMock
       .from('messages')
       .select(`
         *,
@@ -427,7 +499,7 @@ export async function getMessages(
 }
 
 export async function getMessageAttachments(messageId: string) {
-  const { data } = await supabase
+  const { data } = await supabaseMock
     .from('message_attachments')
     .select('*')
     .eq('message_id', messageId);
@@ -436,7 +508,7 @@ export async function getMessageAttachments(messageId: string) {
 }
 
 export async function getMessageReactions(messageId: string) {
-  const { data } = await supabase
+  const { data } = await supabaseMock
     .from('message_reactions')
     .select('*')
     .eq('message_id', messageId);
@@ -451,7 +523,7 @@ export async function toggleReaction(
 ) {
   try {
     // Check if reaction exists
-    const { data: existing } = await supabase
+    const { data: existing } = await supabaseMock
       .from('message_reactions')
       .select('id')
       .eq('message_id', messageId)
@@ -461,7 +533,7 @@ export async function toggleReaction(
 
     if (existing) {
       // Remove reaction
-      const { error: deleteError } = await supabase
+      const { error: deleteError } = await supabaseMock
         .from('message_reactions')
         .delete()
         .eq('id', existing.id);
@@ -469,7 +541,7 @@ export async function toggleReaction(
       if (deleteError) throw deleteError;
     } else {
       // Add reaction
-      const { error: insertError } = await supabase
+      const { error: insertError } = await supabaseMock
         .from('message_reactions')
         .insert([{
           message_id: messageId,
@@ -481,7 +553,7 @@ export async function toggleReaction(
     }
 
     // Fetch updated reactions
-    const { data: reactions } = await supabase
+    const { data: reactions } = await supabaseMock
       .from('message_reactions')
       .select('*')
       .eq('message_id', messageId);
@@ -499,7 +571,7 @@ export async function deleteMessage(messageId: string, senderAddress: string) {
 
   try {
     // First check if the user owns the message
-    const { data: message, error: fetchError } = await supabase
+    const { data: message, error: fetchError } = await supabaseMock
       .from('messages')
       .select('*')
       .eq('id', messageId)
@@ -516,7 +588,7 @@ export async function deleteMessage(messageId: string, senderAddress: string) {
     }
 
     // Delete the message
-    const { error: deleteError } = await supabase
+    const { error: deleteError } = await supabaseMock
       .from('messages')
       .delete()
       .eq('id', messageId)

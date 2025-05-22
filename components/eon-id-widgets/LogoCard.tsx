@@ -30,7 +30,7 @@ export function LogoCard({ userWalletAddress }: LogoCardProps) {
     const updatedLogos = logos.map(logo => ({
       ...logo,
       // Set a default image that you know exists in your public folder
-      image: '/default-avatar.png', // Fallback to a image you know exists
+      image: '/images/avatars/default.svg', // Fallback to a image you know exists
       imageExists: true
     }));
     

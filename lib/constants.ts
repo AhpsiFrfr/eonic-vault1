@@ -1,0 +1,1 @@
+export const HELIUS_API_KEY = process.env.NEXT_PUBLIC_HELIUS_API_KEY; 

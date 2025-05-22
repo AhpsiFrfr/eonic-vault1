@@ -1,11 +1,18 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
 /* Import hyperspace animation styles */
 @import url('../styles/hyperspace.css');
 /* Import Orbitron font for dashboard */
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  .pylon {
+    @apply bg-zinc-900 border border-zinc-700 rounded-xl p-4 text-white w-full max-w-md 
+           shadow-pylon hover:shadow-pylon-hover transition-all duration-200;
+  }
+}
 
 :root {
   --foreground-rgb: 255, 255, 255;
@@ -72,22 +79,7 @@ body {
 }
 
 .widget {
-  flex: 1 1 30%;
-  min-width: 240px;
-  padding: 1rem;
-  background: rgba(0, 8, 18, 0.8);
-  border: 1px solid rgba(0, 204, 255, 0.2);
-  border-radius: 1rem;
-  box-shadow: 0 0 20px rgba(0, 204, 255, 0.1);
-  backdrop-filter: blur(8px);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-  position: relative;
-  overflow: hidden;
-}
-
-.widget:hover {
-  transform: translateY(-4px) scale(1.01);
-  box-shadow: 0 0 40px rgba(0, 204, 255, 0.2);
+  @apply bg-zinc-900 border border-zinc-700 rounded-xl p-4 text-white w-full max-w-md shadow-pylon hover:shadow-pylon-hover transition-all duration-200;
 }
 
 /* Widget 3D effects */
@@ -258,4 +250,12 @@ body {
 
 .ship-glow {
   filter: drop-shadow(0 0 8px rgba(0, 204, 255, 0.6));
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 6px rgba(0, 255, 255, 0.2); }
+  50% { box-shadow: 0 0 12px rgba(0, 255, 255, 0.5); }
+}
+.animate-pulse-glow {
+  animation: pulse-glow 2.5s ease-in-out infinite;
 }

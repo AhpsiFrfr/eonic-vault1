@@ -99,7 +99,7 @@ export function MembersPanel({ isOpen, onClose, onlineUsers, communityUsers }: M
                               alt={user.username}
                               className="w-full h-full object-cover"
                               onError={(e) => {
-                                e.currentTarget.src = '/default-avatar.png';
+                                e.currentTarget.src = '/images/avatars/default.svg';
                               }}
                             />
                           ) : (
@@ -144,7 +144,7 @@ export function MembersPanel({ isOpen, onClose, onlineUsers, communityUsers }: M
                             alt={user.username}
                             className="w-full h-full object-cover"
                             onError={(e) => {
-                              e.currentTarget.src = '/default-avatar.png';
+                              e.currentTarget.src = '/images/avatars/default.svg';
                             }}
                           />
                         ) : (
@@ -180,7 +180,7 @@ export function MembersPanel({ isOpen, onClose, onlineUsers, communityUsers }: M
                 role: getMockProfile(selectedUser.wallet_address)?.title || 'Community Member',
                 timepieceStage: 'Genesis',
                 lookingFor: getMockProfile(selectedUser.wallet_address)?.tagline || 'Connecting with the community',
-                avatar_url: getMockProfile(selectedUser.wallet_address)?.avatar_url || selectedUser.avatar_url || '/default-avatar.png',
+                avatar_url: getMockProfile(selectedUser.wallet_address)?.avatar_url || selectedUser.avatar_url || '/images/avatars/default.svg',
                 links: {
                   github: getMockProfile(selectedUser.wallet_address)?.social_links.github,
                   website: getMockProfile(selectedUser.wallet_address)?.social_links.website,

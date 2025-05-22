@@ -1,0 +1,14 @@
+{
+  "replaceModeDefault": true,
+  "customDirectives": {
+    "replace using protocol": {
+      "action": "overwrite",
+      "cleanup": true,
+      "verifySingleRender": true,
+      "description": "Fully overwrite old components, clean imports and references, verify only one instance renders."
+    }
+  },
+  "defaultDirectives": [
+    "// cursor: replace using protocol"
+  ]
+}

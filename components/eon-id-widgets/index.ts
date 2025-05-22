@@ -1,8 +1,9 @@
-export * from './DisplayNameCard';
-export * from './DomainCard';
-export * from './TimepieceCard';
-export * from './XPLevelCard';
-export * from './HoldingsCard';
-export * from './NFTGalleryCard';
-export * from './WebsiteLinksCard';
-export * from './LogoCard';
+export { DisplayNameCard } from './DisplayNameCard';
+export { TimepieceCard } from './TimepieceCard';
+export { XPLevelCard } from './XPLevelCard';
+export { NFTGalleryCard } from './NFTGalleryCard';
+export { CustomizeEonId } from './CustomizeEonId';
+export { DomainCard } from './DomainCard';
+export { HoldingsCard } from './HoldingsCard';
+export { WebsiteLinksCard } from './WebsiteLinksCard';
+export { LogoCard } from './LogoCard';

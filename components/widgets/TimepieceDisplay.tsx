@@ -57,7 +57,7 @@ export default function TimepieceDisplay() {
               className="relative"
             >
               <Image
-                src={imageError ? "/timepiece-nft.svg" : timepieceStages[evolutionLevel]}
+                src={imageError ? "/images/timepiece-nft.png" : timepieceStages[evolutionLevel]}
                 alt={`Timepiece Stage ${evolutionLevel}`}
                 width={80}
                 height={80}
@@ -73,45 +73,8 @@ export default function TimepieceDisplay() {
               />
             </motion.div>
           </div>
-          
-          {/* Energy particles */}
-          <motion.div 
-            className="absolute w-1 h-1 bg-cyan-400 rounded-full"
-            style={{ top: '20%', left: '10%' }}
-            animate={{ scale: [0, 1, 0], opacity: [0, 1, 0] }}
-            transition={{ duration: 2, repeat: Infinity, delay: 0 }}
-          />
-          <motion.div 
-            className="absolute w-1 h-1 bg-blue-400 rounded-full"
-            style={{ top: '70%', left: '20%' }}
-            animate={{ scale: [0, 1, 0], opacity: [0, 1, 0] }}
-            transition={{ duration: 2, repeat: Infinity, delay: 0.5 }}
-          />
-          <motion.div 
-            className="absolute w-1 h-1 bg-cyan-400 rounded-full"
-            style={{ top: '30%', right: '15%' }}
-            animate={{ scale: [0, 1, 0], opacity: [0, 1, 0] }}
-            transition={{ duration: 2, repeat: Infinity, delay: 1 }}
-          />
-          <motion.div 
-            className="absolute w-1 h-1 bg-indigo-400 rounded-full"
-            style={{ bottom: '20%', right: '10%' }}
-            animate={{ scale: [0, 1, 0], opacity: [0, 1, 0] }}
-            transition={{ duration: 2, repeat: Infinity, delay: 1.5 }}
-          />
-        </div>
-        
-        <div className="mt-2 text-center">
-          <p className="text-cyan-400 text-xs font-medium">STAGE: {evolutionLevel + 1}/6</p>
-          <p className="text-xs text-gray-400">Rarity: {9.3 + (evolutionLevel * 0.2)}/10</p>
-        </div>
-      </div>
-      
-      <div className="mt-2 bg-cyan-900/20 rounded-lg p-2 text-xs">
-        <div className="text-center text-gray-400">
-          Next: <span className="text-cyan-400">{Math.max(0, 14 - (evolutionLevel * 2))} days</span>
         </div>
       </div>
     </motion.div>
   );
-} 
+}

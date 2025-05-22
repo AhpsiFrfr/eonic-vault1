@@ -1,7 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { getMockProfile } from '../../utils/mock-data';
+import { useProfile } from '@/hooks/useProfile';
 import Image from 'next/image';
 
 interface TimepieceCardProps {
@@ -9,25 +8,7 @@ interface TimepieceCardProps {
 }
 
 export function TimepieceCard({ userWalletAddress }: TimepieceCardProps) {
-  const [timepieceUrl, setTimepieceUrl] = useState<string | null>(null);
-  const [timepieceStage, setTimepieceStage] = useState('Genesis');
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    if (userWalletAddress) {
-      setIsLoading(true);
-      const profile = getMockProfile(userWalletAddress);
-      if (profile) {
-        setTimepieceUrl(profile.timepiece_url || '/timepiece-nft.svg');
-        // Mock a stage for now
-        setTimepieceStage('Genesis');
-      } else {
-        // Use default image if no profile found
-        setTimepieceUrl('/timepiece-nft.svg');
-      }
-      setIsLoading(false);
-    }
-  }, [userWalletAddress]);
+  const { profile, isLoading } = useProfile();
 
   return (
     <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
@@ -36,20 +17,29 @@ export function TimepieceCard({ userWalletAddress }: TimepieceCardProps) {
         <div className="w-24 h-24 relative mb-2">
           {isLoading ? (
             <div className="w-full h-full bg-gray-700 animate-pulse rounded-md"></div>
-          ) : timepieceUrl ? (
+          ) : profile?.timepiece_url ? (
             <Image 
-              src={timepieceUrl}
-              alt="EONIC Timepiece" 
+              src={profile.timepiece_url}
+              alt="EONIC Timepiece"
+              fill
+              style={{ objectFit: 'contain' }}
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.src = '/images/timepiece-nft.png';
+              }}
+            />
+          ) : (
+            <Image 
+              src="/images/timepiece-nft.png"
+              alt="Default Timepiece"
               fill
               style={{ objectFit: 'contain' }}
             />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-gray-500">
-              No Timepiece
-            </div>
           )}
         </div>
-        <div className="text-lg font-medium text-indigo-400">{timepieceStage}</div>
+        <div className="text-lg font-medium text-indigo-400">
+          {profile?.timepiece_stage || 'Genesis'}
+        </div>
       </div>
     </div>
   );

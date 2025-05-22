@@ -155,16 +155,16 @@ const generateMockMessages = (room: string, channel: string): CommunityMessage[]
 
 // Mock user data
 const mockOnlineUsers = [
-  { wallet_address: "0x1234...5678", display_name: "EONIC.Admin", avatar_url: "/default-avatar.png" },
-  { wallet_address: "0xabcd...efgh", display_name: "TokenHolder1", avatar_url: "/default-avatar.png" },
-  { wallet_address: "0x7890...1234", display_name: "NFTCollector", avatar_url: "/default-avatar.png" }
+  { wallet_address: "0x1234...5678", display_name: "EONIC.Admin", avatar_url: "/images/avatars/default.svg" },
+  { wallet_address: "0xabcd...efgh", display_name: "TokenHolder1", avatar_url: "/images/avatars/default.svg" },
+  { wallet_address: "0x7890...1234", display_name: "NFTCollector", avatar_url: "/images/avatars/default.svg" }
 ];
 
 const mockCommunityUsers = [
-  { id: "1", username: "EONIC.Admin", display_name: "EONIC.Admin", wallet_address: "0x1234...5678", last_seen: new Date().toISOString(), avatar_url: "/default-avatar.png" },
-  { id: "2", username: "TokenHolder1", display_name: "TokenHolder1", wallet_address: "0xabcd...efgh", last_seen: new Date().toISOString(), avatar_url: "/default-avatar.png" },
-  { id: "3", username: "NFTCollector", display_name: "NFTCollector", wallet_address: "0x7890...1234", last_seen: new Date().toISOString(), avatar_url: "/default-avatar.png" },
-  { id: "4", username: "CommunityMember", display_name: "CommunityMember", wallet_address: "0xijkl...mnop", last_seen: new Date().toISOString(), avatar_url: "/default-avatar.png" }
+  { id: "1", username: "EONIC.Admin", display_name: "EONIC.Admin", wallet_address: "0x1234...5678", last_seen: new Date().toISOString(), avatar_url: "/images/avatars/default.svg" },
+  { id: "2", username: "TokenHolder1", display_name: "TokenHolder1", wallet_address: "0xabcd...efgh", last_seen: new Date().toISOString(), avatar_url: "/images/avatars/default.svg" },
+  { id: "3", username: "NFTCollector", display_name: "NFTCollector", wallet_address: "0x7890...1234", last_seen: new Date().toISOString(), avatar_url: "/images/avatars/default.svg" },
+  { id: "4", username: "CommunityMember", display_name: "CommunityMember", wallet_address: "0xijkl...mnop", last_seen: new Date().toISOString(), avatar_url: "/images/avatars/default.svg" }
 ];
 
 export default function CommunityChat({ userWalletAddress, roomId, channel, viewMode = 'web' }: Props): JSX.Element {
@@ -497,7 +497,7 @@ export default function CommunityChat({ userWalletAddress, roomId, channel, view
             wallet_address: userWalletAddress,
             last_seen: new Date().toISOString(),
             showBusinessCard: true,
-            avatar_url: getMockProfile(userWalletAddress)?.avatar_url || "/default-avatar.png"
+            avatar_url: getMockProfile(userWalletAddress)?.avatar_url || "/images/avatars/default.svg"
           },
           // Other online users
           ...mockOnlineUsers

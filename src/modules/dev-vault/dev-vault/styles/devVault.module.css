@@ -1,0 +1,31 @@
+.card {
+  background: linear-gradient(145deg, #0f172a, #1e293b);
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  border: 1px solid #38bdf8;
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px rgba(56, 189, 248, 0.3);
+}
+
+.cardTitle {
+  font-size: 1.5rem;
+  margin-top: 12px;
+  color: #e0f2fe;
+}
+
+.cardDescription {
+  font-size: 0.95rem;
+  color: #94a3b8;
+  margin-top: 8px;
+  line-height: 1.4;
+}
+
+.icon {
+  font-size: 2rem;
+  color: #38bdf8;
+}

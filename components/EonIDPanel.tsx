@@ -86,11 +86,11 @@ export function EonIDPanel({ isOpen, onClose, userData }: EonIDPanelProps) {
               <div className="flex justify-center mb-6">
                 <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-current">
                   <img 
-                    src={userData.avatar_url || '/default-avatar.png'} 
+                    src={userData.avatar_url || '/images/avatars/default.svg'} 
                     alt={userData.username}
                     className="w-full h-full object-cover"
                     onError={(e) => {
-                      e.currentTarget.src = '/default-avatar.png';
+                      e.currentTarget.src = '/images/avatars/default.svg';
                     }}
                   />
                 </div>

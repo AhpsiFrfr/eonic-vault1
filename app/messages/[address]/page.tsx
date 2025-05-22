@@ -1,10 +1,20 @@
 import React from 'react';
+import { Metadata } from 'next';
 import ClientMessagesPage from './ClientMessagesPage';
 
-interface PageParams {
+export const metadata: Metadata = {
+  title: 'Messages - EONIC',
+  description: 'Direct messaging interface for EONIC',
+};
+
+interface Props {
+  params: {
     address: string;
+  };
 }
 
-export default function DirectMessagesPage({ params }: { params: PageParams }) {
+const DirectMessagesPage = ({ params }: Props) => {
   return <ClientMessagesPage address={params.address} />;
-}
+};
+
+export default DirectMessagesPage;

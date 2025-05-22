@@ -15,6 +15,9 @@ export interface UserProfile {
   solana_domain: string | null;
   created_at: string;
   updated_at: string;
+  timepiece_url?: string;
+  timepiece_stage?: string;
+  timepiece_xp?: number;
 }
 
 /**
@@ -200,7 +203,7 @@ export async function createUserProfile(walletAddress: string): Promise<UserProf
       title: 'EONIC Explorer',
       bio: '',
       wallet_tagline: '',
-      avatar_url: '/default-avatar.png',
+      avatar_url: '/images/avatars/default.svg',
       widget_list: ['nft-showcase', 'xp-tracker'],
       is_public: true,
       solana_domain: solanaDomain,

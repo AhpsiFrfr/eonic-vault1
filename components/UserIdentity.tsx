@@ -72,7 +72,7 @@ export const UserIdentity = ({
   }, [walletAddress]);
   
   const displayName = profile?.display_name || shortenedAddress;
-  const avatarUrl = profile?.avatar_url || '/default-avatar.png';
+  const avatarUrl = profile?.avatar_url || '/images/avatars/default.svg';
   const displayDomain = profile?.solana_domain || solanaDomain;
   
   // If still loading, show skeleton
@@ -94,7 +94,7 @@ export const UserIdentity = ({
           className="w-full h-full object-cover"
           onError={(e) => {
             // Fallback to default avatar on error
-            e.currentTarget.src = '/default-avatar.png';
+            e.currentTarget.src = '/images/avatars/default.svg';
           }} 
         />
       </div>
