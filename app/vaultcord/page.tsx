@@ -5,6 +5,7 @@ import ServerSidebar from './components/ServerSidebar';
 import ChannelList from './components/ChannelList';
 import ChatView from './components/ChatView';
 import { VoiceRoom } from './components/VoiceRoom';
+import { AffirmationPylon } from '@/components/pylons/AffirmationPylon';
 
 export default function VaultcordPage() {
   const router = useRouter();
@@ -53,6 +54,17 @@ export default function VaultcordPage() {
         </div>
         */}
       </main>
+
+      {/* Right Sidebar with Pylon */}
+      <div className="w-80 bg-[#0e1525] border-l border-gray-700 p-4 space-y-4 overflow-y-auto">
+        {/* Voice Room Widget */}
+        <VoiceRoom roomName="voice-general" />
+        
+        {/* ENIC.0 Affirmation Pylon */}
+        <div className="mt-6">
+          <AffirmationPylon />
+        </div>
+      </div>
     </div>
   );
 } 

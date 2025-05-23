@@ -7,6 +7,7 @@ import { useUser } from '@/lib/hooks/useUser';
 import ChannelSidebar from './ChannelSidebar';
 import MessagePanel from './MessagePanel';
 import VoiceChannelList from './VoiceChannelList';
+import { AffirmationPylon } from '@/components/pylons/AffirmationPylon';
 
 interface ChatRoomProps {
   // Add props as needed
@@ -46,9 +47,17 @@ const ChatRoom: React.FC<ChatRoomProps> = () => {
         </div>
       </div>
 
-      {/* Right sidebar with voice channels */}
-      <div className="w-64 bg-[#0e1525] border-l border-gray-700">
-        <VoiceChannelList />
+      {/* Right sidebar with voice channels and pylon */}
+      <div className="w-80 bg-[#0e1525] border-l border-gray-700 flex flex-col">
+        {/* Voice Channels Section */}
+        <div className="flex-1 overflow-y-auto">
+          <VoiceChannelList />
+        </div>
+        
+        {/* ENIC.0 Affirmation Pylon */}
+        <div className="p-4 border-t border-gray-700">
+          <AffirmationPylon />
+        </div>
       </div>
     </div>
   );
