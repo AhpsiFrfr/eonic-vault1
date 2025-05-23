@@ -9,7 +9,7 @@ export default function VaultcordLayout({
 }) {
   return (
     <ThemeProvider>
-      <div className="min-h-screen bg-cosmic-darker text-cosmic-light">
+      <div className="min-h-screen bg-[#0e1525] text-white">
         {children}
       </div>
     </ThemeProvider>

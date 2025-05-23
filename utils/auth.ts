@@ -12,7 +12,7 @@ export const verifyTokenAccess = async (wallet: string, options?: TokenAccessOpt
   try {
     const hasAccess = await checkAccess(wallet);
     if (hasAccess) {
-      return 'user';
+  return 'user';
     }
     return null;
   } catch (error) {
