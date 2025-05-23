@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useWallet } from '@solana/wallet-adapter-react'
 import { motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
+import { setWalletCookie } from '@/utils/auth'
 import WarpTransition from '../../components/WarpTransition'
 import HyperspaceTransition from '../../components/HyperspaceTransition'
 
@@ -19,7 +20,7 @@ const walletShips = [
 
 export default function VaultLoginPage() {
   const router = useRouter()
-  const { wallets, select, connect, connected, wallet } = useWallet()
+  const { wallets, select, connect, connected, wallet, publicKey } = useWallet()
   const [selectedAdapter, setSelectedAdapter] = useState<string | null>(null)
   const [vaultArrived, setVaultArrived] = useState(false)
   const [shipsReady, setShipsReady] = useState(false)
@@ -28,6 +29,30 @@ export default function VaultLoginPage() {
   const [vaultHover, setVaultHover] = useState(false)
   const [transitioning, setTransitioning] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [isConnecting, setIsConnecting] = useState(false)
+
+  // Handle successful wallet connection
+  useEffect(() => {
+    if (connected && publicKey && !transitioning && !isConnecting) {
+      try {
+        const walletAddress = publicKey.toString()
+        console.log('Wallet connected:', walletAddress)
+        
+        // Set the wallet cookie for middleware
+        setWalletCookie(walletAddress)
+        
+        // Start transition to dashboard
+        setTransitioning(true)
+        setTimeout(() => {
+          router.push('/dashboard')
+        }, 1800)
+      } catch (err) {
+        console.error('Error handling wallet connection:', err)
+        setError('Failed to process wallet connection')
+        setIsConnecting(false)
+      }
+    }
+  }, [connected, publicKey, transitioning, isConnecting, router])
 
   const playExitAnimation = () => {
     setTransitioning(true)
@@ -37,46 +62,65 @@ export default function VaultLoginPage() {
   }
 
   const handleShipClick = async (adapterName: string | null) => {
+    if (isConnecting) return // Prevent multiple clicks
+    
     if (adapterName === null) {
+      // Guest mode - set a placeholder wallet and proceed
+      setWalletCookie('guest-mode')
       playExitAnimation()
       return
     }
 
     try {
+      setIsConnecting(true)
       setError(null)
       
       // Find the wallet adapter
       const match = wallets.find(w => w.adapter.name === adapterName)
       if (!match) {
         setError(`Wallet ${adapterName} not found. Please install it first.`)
+        setIsConnecting(false)
         return
       }
 
       // Select the wallet first
       setSelectedAdapter(adapterName)
+      setSelectedShip(adapterName)
       select(match.adapter.name)
 
       // Wait for wallet to be selected
-      await new Promise(resolve => setTimeout(resolve, 100))
-
-      // Check if wallet is selected and ready
-      if (!wallet || !wallet.adapter) {
-        setError('Please make sure the wallet extension is installed and unlocked')
-        return
-      }
+      await new Promise(resolve => setTimeout(resolve, 200))
 
       // Now try to connect
       if (!connected) {
+        console.log('Attempting to connect to', adapterName)
         await connect()
       }
 
-      // If we got here, connection was successful
-      setSelectedShip(adapterName)
-      playExitAnimation()
+      // If we reach here and not connected, there might be an issue
+      if (!connected) {
+        setError('Connection failed. Please try again or check if your wallet is unlocked.')
+        setIsConnecting(false)
+        setSelectedAdapter(null)
+        setSelectedShip(null)
+      }
 
     } catch (err) {
       console.error('Wallet connection error:', err)
-      setError(err instanceof Error ? err.message : 'Failed to connect wallet')
+      const errorMessage = err instanceof Error ? err.message : 'Failed to connect wallet'
+      
+      // Handle specific error types
+      if (errorMessage.includes('User rejected')) {
+        setError('Connection cancelled. Please try again.')
+      } else if (errorMessage.includes('not installed')) {
+        setError(`Please install the ${adapterName} wallet extension.`)
+      } else {
+        setError(errorMessage)
+      }
+      
+      setIsConnecting(false)
+      setSelectedAdapter(null)
+      setSelectedShip(null)
     }
   }
 

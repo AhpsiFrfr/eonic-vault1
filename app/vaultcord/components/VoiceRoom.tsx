@@ -15,6 +15,7 @@ import { useRouter } from 'next/navigation';
 
 interface VoiceRoomProps {
   roomName: string;
+  userId?: string; // Optional since we can get from wallet
 }
 
 export function VoiceRoom({ roomName }: VoiceRoomProps) {

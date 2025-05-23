@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import VoiceRoom from './VoiceRoom';
+import { VoiceRoom } from './VoiceRoom';
 import { useTheme } from '@/context/ThemeContext';
 import { useUser } from '@/lib/hooks/useUser';
 
@@ -14,13 +14,13 @@ interface Server {
 
 export default function ServerSidebar() {
   const { theme } = useTheme();
-  const { wallet, isConnecting, error, connectWallet } = useUser();
+  const { wallet, isConnecting, error } = useUser();
   const [activeServer, setActiveServer] = useState<string>('dev-vault');
   const [servers] = useState<Server[]>([
     {
       id: 'dev-vault',
       name: 'Dev Vault',
-      icon: '/images/icons/dev-vault.png',
+      icon: '/images/eonic-vault-ship.png',
       unreadCount: 3,
     },
   ]);
@@ -59,12 +59,6 @@ export default function ServerSidebar() {
         {error ? (
           <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20">
             <p className="text-red-500 text-sm">{error}</p>
-            <button
-              onClick={connectWallet}
-              className="mt-2 px-4 py-2 bg-cosmic-accent rounded-lg text-white text-sm hover:bg-cosmic-accent/90 transition-colors"
-            >
-              Connect Wallet
-            </button>
           </div>
         ) : isConnecting ? (
           <div className="p-4 text-cosmic-light/70 text-sm">
@@ -80,12 +74,9 @@ export default function ServerSidebar() {
             <p className="text-cosmic-light/70 text-sm mb-2">
               Connect your wallet to join voice chat
             </p>
-            <button
-              onClick={connectWallet}
-              className="px-4 py-2 bg-cosmic-accent rounded-lg text-white text-sm hover:bg-cosmic-accent/90 transition-colors"
-            >
-              Connect Wallet
-            </button>
+            <p className="text-cosmic-light/50 text-xs">
+              Go to the login page to connect
+            </p>
           </div>
         )}
       </div>

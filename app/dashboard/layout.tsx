@@ -17,6 +17,7 @@ const navItems = [
   { name: 'Vault', href: '/dashboard/vault' },
   { name: 'Community', href: '/dashboard/community' },
   { name: 'EON-ID', href: '/dashboard/eon-id' },
+  { name: 'VaultCord', href: '/vaultcord' },
   { name: 'Dev Vault', href: '/dev-hq/overview' },
 ];
 

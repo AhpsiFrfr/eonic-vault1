@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useTheme } from '@/context/ThemeContext';
-import VoiceRoom from './VoiceRoom';
+import { VoiceRoom } from './VoiceRoom';
 
 interface Channel {
   id: string;
@@ -111,7 +111,6 @@ export default function ChannelList() {
                     <div className="mt-1 pl-6">
                       <VoiceRoom
                         roomName={channel.id}
-                        userId="user123" // Replace with actual user ID
                       />
                     </div>
                   )}
