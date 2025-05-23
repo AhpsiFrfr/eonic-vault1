@@ -1,7 +1,7 @@
 'use client';
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useTheme } from '@/lib/theme/ThemeProvider';
-import { useUser } from '@/lib/hooks/useUser';
 
 interface VoiceChannel {
   id: string;
@@ -43,8 +43,12 @@ const mockVoiceChannels: VoiceChannel[] = [
 
 const VoiceChannelList: React.FC = () => {
   const { theme } = useTheme();
-  const { user } = useUser();
+  const router = useRouter();
   const [channels] = useState<VoiceChannel[]>(mockVoiceChannels);
+
+  const handleJoinVoice = () => {
+    router.push('/vaultcord');
+  };
 
   return (
     <div className="p-4">
@@ -57,8 +61,11 @@ const VoiceChannelList: React.FC = () => {
                 <span className="text-indigo-400 mr-2">🔊</span>
                 {channel.name}
               </h3>
-              <button className="text-gray-400 hover:text-white text-sm">
-                Join
+              <button 
+                onClick={handleJoinVoice}
+                className="text-blue-400 hover:text-blue-300 text-sm bg-blue-600/20 hover:bg-blue-600/30 px-3 py-1 rounded transition-colors"
+              >
+                Join VaultCord
               </button>
             </div>
             
@@ -93,6 +100,20 @@ const VoiceChannelList: React.FC = () => {
             )}
           </div>
         ))}
+      </div>
+      
+      {/* Quick Access to VaultCord */}
+      <div className="mt-6 p-4 bg-blue-600/10 border border-blue-600/20 rounded-lg">
+        <h3 className="text-blue-400 font-medium mb-2">🎙️ Enhanced Voice Experience</h3>
+        <p className="text-sm text-gray-400 mb-3">
+          Join VaultCord for advanced voice features, spatial audio, and real-time collaboration.
+        </p>
+        <button
+          onClick={handleJoinVoice}
+          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded transition-colors"
+        >
+          Launch VaultCord
+        </button>
       </div>
     </div>
   );

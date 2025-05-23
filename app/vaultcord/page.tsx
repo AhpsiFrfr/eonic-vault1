@@ -3,7 +3,7 @@
 import ServerSidebar from './components/ServerSidebar';
 import ChannelList from './components/ChannelList';
 import ChatView from './components/ChatView';
-import VoiceRoom from './components/VoiceRoom';
+import { VoiceRoom } from './components/VoiceRoom';
 
 export default function VaultcordPage() {
   return (

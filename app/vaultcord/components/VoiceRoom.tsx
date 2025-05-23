@@ -1,133 +1,93 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
-import {
-  Room,
-  RemoteParticipant,
-  RemoteTrackPublication,
-  RemoteAudioTrack,
-  RoomEvent,
-  Participant,
-  LocalParticipant
-} from 'livekit-client';
-import { useRouter } from 'next/navigation';
 
 interface VoiceRoomProps {
   roomName: string;
   userId?: string; // Optional since we can get from wallet
 }
 
-export function VoiceRoom({ roomName }: VoiceRoomProps) {
+export function VoiceRoom({ roomName, userId }: VoiceRoomProps) {
   const { publicKey } = useWallet();
-  const [room, setRoom] = useState<Room | null>(null);
-  const [participants, setParticipants] = useState<(RemoteParticipant | LocalParticipant)[]>([]);
-  const [isConnecting, setIsConnecting] = useState(false);
-  const router = useRouter();
+  const [joined, setJoined] = useState(false);
+  const [muted, setMuted] = useState(false);
+  const [participants] = useState(['You', 'Nick', 'ENIC.0']); // Replace with dynamic data later
 
-  useEffect(() => {
-    if (!publicKey) return;
+  const walletId = userId || publicKey?.toString();
 
-    const connectToRoom = async () => {
-      try {
-        setIsConnecting(true);
-        const response = await fetch('/api/livekit-token', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            roomName,
-            participantName: publicKey.toString(),
-          }),
-        });
-
-        const { token } = await response.json();
-        const room = new Room();
-
-        room.on(RoomEvent.ParticipantConnected, () => {
-          setParticipants([room.localParticipant, ...room.remoteParticipants]);
-        });
-
-        room.on(RoomEvent.ParticipantDisconnected, () => {
-          setParticipants([room.localParticipant, ...room.remoteParticipants]);
-        });
-
-        await room.connect('wss://your-livekit-server.com', token);
-        setRoom(room);
-        setParticipants([room.localParticipant, ...room.remoteParticipants]);
-        
-        // Save current room in localStorage
-        localStorage.setItem('currentVoiceRoom', roomName);
-        
-        setIsConnecting(false);
-      } catch (error) {
-        console.error('Failed to connect to voice room:', error);
-        setIsConnecting(false);
-      }
-    };
-
-    // Auto-reconnect from localStorage if needed
-    const savedRoom = localStorage.getItem('currentVoiceRoom');
-    if (savedRoom === roomName) {
-      connectToRoom();
-    }
-
-    // Cleanup on unmount or room change
-    return () => {
-      if (room) {
-        localStorage.removeItem('currentVoiceRoom');
-        room.disconnect();
-      }
-    };
-  }, [publicKey, roomName]);
-
-  // Reconnect handling on page reload
-  useEffect(() => {
-    const handleBeforeUnload = () => {
-      if (room) {
-        room.disconnect();
-      }
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-    };
-  }, [room]);
-
-  if (!publicKey) {
+  if (!walletId) {
     return (
-      <div className="p-6 bg-gray-800 text-gray-300 rounded">
-        Please connect your wallet to join voice chat.
-      </div>
-    );
-  }
-
-  if (isConnecting) {
-    return (
-      <div className="p-6 bg-gray-800 text-gray-300 rounded">
-        Connecting to voice room...
+      <div className="p-4 bg-zinc-900 text-gray-300 rounded-lg">
+        <p className="text-sm">Connect your wallet to join voice chat.</p>
       </div>
     );
   }
 
   return (
-    <div className="p-6 bg-gray-800 rounded">
-      <h2 className="text-xl font-semibold mb-4">Voice Room: {roomName}</h2>
-      
-      <div className="space-y-4">
-        {participants.map((p) => {
-          const audioTrack = Array.from(p.audioTracks.values())
-            .find((pub): pub is RemoteTrackPublication => pub.track instanceof RemoteAudioTrack);
-          const isMuted = !audioTrack?.isSubscribed || audioTrack.track?.isMuted;
+    <div className="p-4 bg-zinc-900 text-white rounded-lg shadow-xl border border-zinc-700">
+      <h3 className="text-lg font-bold mb-3 text-cyan-400">🎙️ {roomName}</h3>
 
-          return (
-            <div key={p.identity} className="flex items-center space-x-3 p-3 bg-gray-700 rounded">
-              <div className={`w-2 h-2 rounded-full ${isMuted ? 'bg-red-500' : 'bg-green-500'}`} />
-              <span>{p.identity.slice(0, 4)}...{p.identity.slice(-4)}</span>
+      {!joined ? (
+        <button
+          onClick={() => setJoined(true)}
+          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition-colors"
+        >
+          Join Voice Channel
+        </button>
+      ) : (
+        <div className="space-y-3">
+          {/* Connection Status */}
+          <div className="flex items-center justify-between p-2 bg-zinc-800 rounded">
+            <div className="flex items-center space-x-2">
+              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+              <span className="text-green-400 text-sm font-medium">Connected</span>
             </div>
-          );
-        })}
-      </div>
+            <button
+              onClick={() => setJoined(false)}
+              className="text-xs bg-red-600 px-3 py-1 rounded hover:bg-red-700 transition-colors"
+            >
+              Leave
+            </button>
+          </div>
+
+          {/* Voice Controls */}
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => setMuted(!muted)}
+              className={`flex-1 px-3 py-2 rounded text-sm font-medium transition-colors ${
+                muted 
+                  ? 'bg-red-600 hover:bg-red-700 text-white' 
+                  : 'bg-green-600 hover:bg-green-700 text-white'
+              }`}
+            >
+              {muted ? '🔇 Unmute' : '🎤 Mute'}
+            </button>
+            <div className="text-xs text-gray-400 px-2">
+              {participants.length} online
+            </div>
+          </div>
+
+          {/* Participants List */}
+          <div className="space-y-1">
+            <h4 className="text-xs text-gray-400 uppercase tracking-wide">Participants</h4>
+            {participants.map((user, idx) => (
+              <div key={idx} className="flex items-center space-x-2 p-2 bg-zinc-800 rounded text-sm">
+                <div className={`w-2 h-2 rounded-full ${idx === 0 ? 'bg-blue-400' : 'bg-green-400'}`}></div>
+                <span className={idx === 0 ? 'text-blue-400 font-medium' : 'text-white'}>
+                  {user}
+                  {idx === 0 && ' (You)'}
+                </span>
+                {idx !== 0 && (
+                  <span className="text-xs text-gray-500 ml-auto">
+                    {muted && idx === 0 ? 'Muted' : 'Speaking'}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 } 
