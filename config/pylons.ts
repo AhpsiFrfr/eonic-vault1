@@ -1,4 +1,4 @@
-import { FaStar, FaCoins, FaShieldAlt, FaClock, FaBullhorn, FaVolumeUp, FaSlidersH, FaMagic, FaBroadcastTower } from 'react-icons/fa';
+import { FaStar, FaCoins, FaShieldAlt, FaClock, FaBullhorn, FaVolumeUp, FaSlidersH, FaMagic, FaBroadcastTower, FaHeart } from 'react-icons/fa';
 
 export const pylonConfig = [
   {
@@ -54,5 +54,11 @@ export const pylonConfig = [
     icon: FaBroadcastTower,
     description: 'Listen to ambient vault soundscapes',
     color: '#00FFFF'
+  },
+  {
+    name: 'Affirmation',
+    icon: FaHeart,
+    description: 'Subscribe to daily affirmations from ENIC.0',
+    color: '#00FFAA'
   }
 ]; 

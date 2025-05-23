@@ -25,7 +25,8 @@ const usageGlow: Record<PylonName, string> = {
   'Audio Control': 'shadow-[0_0_8px_rgba(75,0,130,0.5)]',
   'Audio Settings': 'shadow-[0_0_8px_rgba(138,43,226,0.5)]',
   'Glow Level Tester': 'shadow-[0_0_8px_rgba(0,212,255,0.5)]',
-  'Radio': 'shadow-[0_0_8px_rgba(0,255,255,0.5)]'
+  'Radio': 'shadow-[0_0_8px_rgba(0,255,255,0.5)]',
+  'Affirmation': 'shadow-[0_0_8px_rgba(0,255,170,0.5)]'
 };
 
 const pylonCommentary: Record<PylonName, string> = {
@@ -37,7 +38,8 @@ const pylonCommentary: Record<PylonName, string> = {
   'Audio Control': "The right sound effects can enhance your experience. Try different combinations!",
   'Audio Settings': "Perfect audio balance is crucial for an immersive experience. Adjust to your liking!",
   'Glow Level Tester': "This tool helps visualize how XP levels affect the visual feedback across the Vault interface.",
-  'Radio': "Immerse yourself in the ambient soundscapes of the EONIC Vault. Each track enhances your experience!"
+  'Radio': "Immerse yourself in the ambient soundscapes of the EONIC Vault. Each track enhances your experience!",
+  'Affirmation': "Daily positive reinforcement can boost your productivity and mindset. Let me send you personalized affirmations!"
 };
 
 const pylonDescriptions: Record<PylonName, string> = {
@@ -49,7 +51,8 @@ const pylonDescriptions: Record<PylonName, string> = {
   'Audio Control': "Sound Effect Controls",
   'Audio Settings': "Audio Configuration",
   'Glow Level Tester': "Visual Feedback Testing Tool",
-  'Radio': "Ambient Soundscape Player"
+  'Radio': "Ambient Soundscape Player",
+  'Affirmation': "Daily Motivation SMS Service"
 };
 
 // Create a map of pylon components
