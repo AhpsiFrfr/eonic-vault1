@@ -1,3 +1,5 @@
+'use client';
+
 import { playSFX, SoundEffect } from '../../utils/audio';
 
 export default function AudioTest() {

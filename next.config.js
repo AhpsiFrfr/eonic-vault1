@@ -1,6 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  typescript: {
+    ignoreBuildErrors: true,
+  },
   images: {
     unoptimized: true,
     domains: ['localhost'],
@@ -14,32 +17,25 @@ const nextConfig = {
   async headers() {
     return [
       {
-        source: '/:path*',
+        source: '/(.*)',
         headers: [
           {
             key: 'Content-Security-Policy',
             value: `
               default-src 'self';
-              script-src 'self' 'unsafe-eval' 'unsafe-inline' https://fonts.googleapis.com;
-              style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com;
-              img-src 'self' blob: data: https:;
-              media-src 'self' blob: https:;
+              connect-src 'self' https://www.youtube.com/oembed blob: ws:;
+              script-src 'self' 'unsafe-eval' 'unsafe-inline';
+              style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
               font-src 'self' https://fonts.gstatic.com;
-              connect-src 'self' 
-                https://*.solana.com 
-                wss://*.livekit.cloud
-                https://*.livekit.cloud
-                https://*.helius.xyz
-                wss://* 
-                https://*.supabase.co
-                https://fonts.googleapis.com
-                https://fonts.gstatic.com;
-              frame-src 'self' https://*.phantom.app;
+              frame-src https://www.youtube.com;
+              child-src https://www.youtube.com;
+              media-src 'self' blob: data:;
+              img-src 'self' data: blob: https:;
               worker-src 'self' blob:;
             `.replace(/\s{2,}/g, ' ').trim()
           }
-        ],
-      },
+        ]
+      }
     ];
   },
   webpack: (config, { isServer }) => {

@@ -41,21 +41,25 @@ const ProfileSection = ({ walletAddress }: { walletAddress: string }) => {
   const isOnDashboard = pathname === '/dashboard';
   
   // Define updateProfileData with useCallback to prevent infinite loops
-  const updateProfileData = useCallback(() => {
-    // Get profile data from mock storage
-    const profile = getMockProfile(walletAddress) || createDefaultProfile(walletAddress);
-    
-    if (profile.display_name !== displayName || profile.avatar_url !== avatarUrl) {
-      console.log('[MOCK] Profile section updating with new data:', {
-        oldName: displayName,
-        newName: profile.display_name,
-        oldAvatar: avatarUrl ? 'Set' : 'Not set',
-        newAvatar: profile.avatar_url ? 'Set' : 'Not set'
-      });
+  const updateProfileData = useCallback(async () => {
+    try {
+      // Get profile data from mock storage
+      const profile = await getMockProfile(walletAddress);
       
-      setDisplayName(profile.display_name || 'Vault Member');
-      setAvatarUrl(profile.avatar_url || '/images/avatars/default.svg');
-      setRefreshKey(prev => prev + 1);
+      if (profile && (profile.display_name !== displayName || profile.avatar_url !== avatarUrl)) {
+        console.log('[MOCK] Profile section updating with new data:', {
+          oldName: displayName,
+          newName: profile.display_name,
+          oldAvatar: avatarUrl ? 'Set' : 'Not set',
+          newAvatar: profile.avatar_url ? 'Set' : 'Not set'
+        });
+        
+        setDisplayName(profile.display_name || 'Vault Member');
+        setAvatarUrl(profile.avatar_url || '/images/avatars/default.svg');
+        setRefreshKey(prev => prev + 1);
+      }
+    } catch (error) {
+      console.error('Error updating profile data:', error);
     }
   }, [walletAddress, displayName, avatarUrl]);
   

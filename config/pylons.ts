@@ -1,4 +1,4 @@
-import { FaStar, FaCoins, FaShieldAlt, FaClock, FaBullhorn, FaVolumeUp, FaSlidersH, FaMagic } from 'react-icons/fa';
+import { FaStar, FaCoins, FaShieldAlt, FaClock, FaBullhorn, FaVolumeUp, FaSlidersH, FaMagic, FaBroadcastTower } from 'react-icons/fa';
 
 export const pylonConfig = [
   {
@@ -48,5 +48,11 @@ export const pylonConfig = [
     icon: FaMagic,
     description: 'Test different glow level effects',
     color: '#00D4FF'
+  },
+  {
+    name: 'Radio',
+    icon: FaBroadcastTower,
+    description: 'Listen to ambient vault soundscapes',
+    color: '#00FFFF'
   }
 ]; 

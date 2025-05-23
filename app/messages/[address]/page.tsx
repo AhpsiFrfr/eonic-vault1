@@ -8,13 +8,14 @@ export const metadata: Metadata = {
 };
 
 interface Props {
-  params: {
+  params: Promise<{
     address: string;
-  };
+  }>;
 }
 
-const DirectMessagesPage = ({ params }: Props) => {
-  return <ClientMessagesPage address={params.address} />;
+const DirectMessagesPage = async ({ params }: Props) => {
+  const { address } = await params;
+  return <ClientMessagesPage address={address} />;
 };
 
 export default DirectMessagesPage;

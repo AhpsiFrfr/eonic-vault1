@@ -2,12 +2,35 @@
 
 import React, { useState, useRef } from 'react';
 
+interface ChatSearchProps {
+  channelId: string;
+  onClose: () => void;
+}
+
+interface SearchResult {
+  id: string;
+  sender: string;
+  content: string;
+  timestamp: number;
+  hasFile: boolean;
+  hasLink: boolean;
+  isPinned: boolean;
+}
+
+interface SearchFilters {
+  fromUser: string;
+  hasFile: boolean;
+  hasLink: boolean;
+  isPinned: boolean;
+  dateRange: 'all' | 'today' | 'week' | 'month';
+}
+
 // @dev-vault-component
-export default function ChatSearch({ channelId, onClose }) {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [isSearching, setIsSearching] = useState(false);
-  const [searchResults, setSearchResults] = useState([]);
-  const [activeFilters, setActiveFilters] = useState({
+export default function ChatSearch({ channelId, onClose }: ChatSearchProps) {
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [isSearching, setIsSearching] = useState<boolean>(false);
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [activeFilters, setActiveFilters] = useState<SearchFilters>({
     fromUser: '',
     hasFile: false,
     hasLink: false,
@@ -15,7 +38,7 @@ export default function ChatSearch({ channelId, onClose }) {
     dateRange: 'all' // 'all', 'today', 'week', 'month'
   });
   
-  const searchInputRef = useRef(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   
   // Focus search input on mount
   React.useEffect(() => {
@@ -183,7 +206,7 @@ export default function ChatSearch({ channelId, onClose }) {
           <select
             className="px-2 py-1 text-xs rounded-full bg-zinc-700 text-zinc-300 hover:bg-zinc-600 focus:outline-none"
             value={activeFilters.dateRange}
-            onChange={(e) => setDateRange(e.target.value)}
+            onChange={(e) => setDateRange(e.target.value as 'all' | 'today' | 'week' | 'month')}
           >
             <option value="all">All Time</option>
             <option value="today">Today</option>

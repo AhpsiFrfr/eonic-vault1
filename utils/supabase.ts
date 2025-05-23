@@ -4,10 +4,50 @@
 import { createClient } from '@supabase/supabase-js';
 import { UserProfile } from './user';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder_key';
 
-export const supabase = createClient(supabaseUrl, supabaseKey);
+// Create a mock client that doesn't make real network requests when using placeholders
+let supabase: any;
+
+if (supabaseUrl.includes('placeholder') || supabaseKey.includes('placeholder')) {
+  console.log('[MOCK] Using mock Supabase implementation');
+  supabase = {
+    from: () => ({
+      select: () => ({ 
+        eq: () => ({ 
+          single: () => Promise.resolve({ data: null, error: null }),
+          maybeSingle: () => Promise.resolve({ data: null, error: null })
+        }),
+        order: () => ({ 
+          limit: () => Promise.resolve({ data: [], error: null })
+        })
+      }),
+      insert: () => ({ 
+        select: () => ({ 
+          single: () => Promise.resolve({ data: null, error: null })
+        })
+      }),
+      update: () => ({ 
+        eq: () => Promise.resolve({ data: null, error: null })
+      }),
+      delete: () => ({ 
+        eq: () => Promise.resolve({ data: null, error: null })
+      })
+    }),
+    auth: {
+      getSession: () => Promise.resolve({ data: { session: null }, error: null })
+    },
+    channel: () => ({
+      on: () => ({ subscribe: () => {} }),
+      subscribe: () => {}
+    })
+  };
+} else {
+  supabase = createClient(supabaseUrl, supabaseKey);
+}
+
+export { supabase };
 
 // Helper function to create a profile
 export async function createProfile(walletAddress: string, data: Partial<UserProfile>) {

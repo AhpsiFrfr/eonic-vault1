@@ -10,7 +10,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useState, useRef, useEffect } from 'react';
-import { FaAngleLeft, FaAngleRight, FaCoins, FaStar, FaShieldAlt, FaClock, FaBullhorn, FaVolumeUp, FaSlidersH } from 'react-icons/fa';
+import { FaAngleLeft, FaAngleRight, FaCoins, FaStar, FaShieldAlt, FaClock, FaBullhorn, FaVolumeUp, FaSlidersH, FaBroadcastTower } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface PylonState {
@@ -35,12 +35,13 @@ const icons: Record<string, JSX.Element> = {
   'Timepiece Evolution': <FaClock className="text-blue-300" />,
   'Announcements': <FaBullhorn className="text-pink-400" />,
   'Audio Control': <FaVolumeUp className="text-indigo-400" />,
-  'Audio Settings': <FaSlidersH className="text-purple-300" />
+  'Audio Settings': <FaSlidersH className="text-purple-300" />,
+  'Radio': <FaBroadcastTower className="text-cyan-400" />
 };
 
 const pylonGroups: Record<string, string[]> = {
   "System": ['Token', 'XP Tracker', 'Vault Reputation', 'Timepiece Evolution'],
-  "Interface": ['Announcements', 'Audio Control', 'Audio Settings']
+  "Interface": ['Announcements', 'Audio Control', 'Audio Settings', 'Radio']
 };
 
 function SortableItem({ id, toggle, active }: SortableItemProps) {

@@ -1,10 +1,10 @@
-import { useEffect, useRef } from 'react';
+import React, { useRef, useMemo, useEffect } from 'react';
 import * as THREE from 'three';
 import { useFrame, useThree, Canvas, extend } from '@react-three/fiber';
-import { Points, BufferGeometry, PointMaterial } from '@react-three/drei';
+import { Points, PointMaterial } from '@react-three/drei';
 
 // Extend Three.js elements
-extend({ BufferGeometry, PointMaterial });
+extend({ PointMaterial });
 
 interface ParticleFieldProps {
   viewport: {
@@ -41,7 +41,7 @@ const ParticleField = () => {
     points.current.geometry = geometry;
   }, [viewport]);
 
-  useFrame((_state: THREE.Object3D, _delta: number) => {
+  useFrame((state, delta) => {
     if (!points.current) return;
 
     const positions = points.current.geometry.attributes.position.array as Float32Array;
@@ -60,7 +60,7 @@ const ParticleField = () => {
 
   return (
     <Points ref={points}>
-      <BufferGeometry />
+      <bufferGeometry />
       <PointMaterial
         size={2}
         sizeAttenuation={true}

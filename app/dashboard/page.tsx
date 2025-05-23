@@ -24,7 +24,8 @@ const usageGlow: Record<PylonName, string> = {
   'Announcements': 'shadow-[0_0_8px_rgba(255,105,180,0.5)]',
   'Audio Control': 'shadow-[0_0_8px_rgba(75,0,130,0.5)]',
   'Audio Settings': 'shadow-[0_0_8px_rgba(138,43,226,0.5)]',
-  'Glow Level Tester': 'shadow-[0_0_8px_rgba(0,212,255,0.5)]'
+  'Glow Level Tester': 'shadow-[0_0_8px_rgba(0,212,255,0.5)]',
+  'Radio': 'shadow-[0_0_8px_rgba(0,255,255,0.5)]'
 };
 
 const pylonCommentary: Record<PylonName, string> = {
@@ -35,7 +36,8 @@ const pylonCommentary: Record<PylonName, string> = {
   'Announcements': "Stay informed with the latest updates. Knowledge is power in the EONIC ecosystem!",
   'Audio Control': "The right sound effects can enhance your experience. Try different combinations!",
   'Audio Settings': "Perfect audio balance is crucial for an immersive experience. Adjust to your liking!",
-  'Glow Level Tester': "This tool helps visualize how XP levels affect the visual feedback across the Vault interface."
+  'Glow Level Tester': "This tool helps visualize how XP levels affect the visual feedback across the Vault interface.",
+  'Radio': "Immerse yourself in the ambient soundscapes of the EONIC Vault. Each track enhances your experience!"
 };
 
 const pylonDescriptions: Record<PylonName, string> = {
@@ -46,7 +48,8 @@ const pylonDescriptions: Record<PylonName, string> = {
   'Announcements': "System Updates & News",
   'Audio Control': "Sound Effect Controls",
   'Audio Settings': "Audio Configuration",
-  'Glow Level Tester': "Visual Feedback Testing Tool"
+  'Glow Level Tester': "Visual Feedback Testing Tool",
+  'Radio': "Ambient Soundscape Player"
 };
 
 // Create a map of pylon components

@@ -3,17 +3,16 @@ import type { NextRequest } from 'next/server';
 import { verifyTokenAccess, roleRedirect } from './utils/auth';
 
 export async function middleware(request: NextRequest) {
-  // DISABLED for testing - just pass through all requests
-  console.log('Middleware disabled for testing - allowing all routes');
-  return NextResponse.next();
-  
-  /* Original code - disabled temporarily
   const path = request.nextUrl.pathname;
-  // Consider the dashboard root path as public to prevent redirection loops
-  const publicPaths = ['/', '/login', '/dashboard'];
   
-  // Skip middleware for public paths
-  if (publicPaths.includes(path)) {
+  // Public paths that don't require authentication
+  const publicPaths = ['/', '/login', '/access-denied', '/api/register-subdomain'];
+  
+  // Skip middleware for public paths and static assets
+  if (publicPaths.includes(path) || 
+      path.startsWith('/_next') || 
+      path.startsWith('/public') ||
+      path.includes('.')) {
     return NextResponse.next();
   }
   
@@ -24,6 +23,7 @@ export async function middleware(request: NextRequest) {
     // Add a query parameter to indicate this is a middleware redirect
     const loginUrl = new URL('/login', request.url);
     loginUrl.searchParams.set('redirect', 'true');
+    loginUrl.searchParams.set('returnTo', path);
     return NextResponse.redirect(loginUrl);
   }
   
@@ -41,14 +41,19 @@ export async function middleware(request: NextRequest) {
   }
   
   return NextResponse.next();
-  */
 }
 
 export const config = {
   matcher: [
     '/dashboard/:path*',
+    '/vault/:path*',
+    '/dev-hq/:path*',
+    '/vaultcord/:path*',
+    '/eon-id/:path*',
     '/cabal/:path*', 
     '/admin/:path*',
-    '/profile'
+    '/profile',
+    '/messages/:path*',
+    '/showcase'
   ]
 };

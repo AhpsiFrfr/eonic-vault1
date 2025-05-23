@@ -12,7 +12,8 @@ const usageGlow = {
   'Announcements': 'shadow-[0_0_8px_rgba(255,105,180,0.5)]',
   'Audio Control': 'shadow-[0_0_8px_rgba(75,0,130,0.5)]',
   'Audio Settings': 'shadow-[0_0_8px_rgba(138,43,226,0.5)]',
-  'Glow Level Tester': 'shadow-[0_0_8px_rgba(0,212,255,0.5)]'
+  'Glow Level Tester': 'shadow-[0_0_8px_rgba(0,212,255,0.5)]',
+  'Radio': 'shadow-[0_0_8px_rgba(0,255,255,0.5)]'
 };
 
 interface SortablePylonWrapperProps {

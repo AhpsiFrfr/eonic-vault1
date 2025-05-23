@@ -13,7 +13,7 @@ interface ChatRoomProps {
 
 const ChatRoom: React.FC<ChatRoomProps> = () => {
   const { theme } = useTheme();
-  const { user } = useUser();
+  const { wallet, isConnecting, error } = useUser();
 
   return (
     <div className="flex h-screen bg-gray-950">

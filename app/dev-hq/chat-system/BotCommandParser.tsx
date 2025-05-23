@@ -2,13 +2,30 @@
 
 import React, { useState, useRef } from 'react';
 
+interface BotCommandParserProps {
+  onExecute: (result: any) => void;
+  onClose: () => void;
+}
+
+interface CommandResult {
+  success: boolean;
+  message: string;
+}
+
+interface Command {
+  name: string;
+  description: string;
+  usage: string;
+  example: string;
+}
+
 // @dev-vault-component
-export default function BotCommandParser({ onExecute, onClose }) {
-  const [command, setCommand] = useState('');
-  const [suggestions, setSuggestions] = useState([]);
-  const [isExecuting, setIsExecuting] = useState(false);
-  const [result, setResult] = useState(null);
-  const inputRef = useRef(null);
+export default function BotCommandParser({ onExecute, onClose }: BotCommandParserProps) {
+  const [command, setCommand] = useState<string>('');
+  const [suggestions, setSuggestions] = useState<Command[]>([]);
+  const [isExecuting, setIsExecuting] = useState<boolean>(false);
+  const [result, setResult] = useState<CommandResult | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   
   // Available bot commands
   const availableCommands = [
@@ -56,7 +73,7 @@ export default function BotCommandParser({ onExecute, onClose }) {
   }, []);
   
   // Handle input change and show suggestions
-  const handleInputChange = (e) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setCommand(value);
     
@@ -208,7 +225,7 @@ export default function BotCommandParser({ onExecute, onClose }) {
     }, 500);
   };
   
-  const handleKeyDown = (e) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       executeCommand();
@@ -220,7 +237,7 @@ export default function BotCommandParser({ onExecute, onClose }) {
     }
   };
   
-  const selectSuggestion = (suggestion) => {
+  const selectSuggestion = (suggestion: Command) => {
     setCommand('/' + suggestion.name + ' ');
     inputRef.current?.focus();
   };

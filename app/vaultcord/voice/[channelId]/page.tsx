@@ -1,10 +1,15 @@
+import React from 'react';
 import { VoiceRoom } from '../../components/VoiceRoom';
-import { useWallet } from '@solana/wallet-adapter-react';
 
-export default function VoiceChannelPage({ params }: { params: { channelId: string } }) {
+interface Props {
+  params: Promise<{ channelId: string }>;
+}
+
+export default async function VoiceChannelPage({ params }: Props) {
+  const { channelId } = await params;
   return (
     <div className="flex-1 h-full">
-      <VoiceRoom roomName={params.channelId} />
+      <VoiceRoom roomName={channelId} />
     </div>
   );
 } 

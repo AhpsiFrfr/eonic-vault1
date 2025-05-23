@@ -6,7 +6,8 @@ import dynamic from 'next/dynamic';
 import EonIDSettings from '../../../components/EonIDSettings';
 import DisplayEonID from '../../../components/DisplayEonID';
 import EonIDWidgetSelector from '../../../components/EonIDWidgetSelector';
-import { getMockProfile, MockProfile } from '../../../utils/mock-data';
+import { getMockProfile } from '../../../utils/mock-data';
+import { UserProfile } from '../../../utils/user';
 
 export function EonIdClient() {
   const { publicKey } = useWallet();
@@ -15,7 +16,7 @@ export function EonIdClient() {
   const userAddress = walletAddress || 'guest';
   
   // Add profile state to force re-renders
-  const [profile, setProfile] = useState<MockProfile | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [lastUpdate, setLastUpdate] = useState(Date.now());
   
   const [activeWidgets, setActiveWidgets] = useState([
@@ -31,23 +32,27 @@ export function EonIdClient() {
   
   // Load initial profile
   useEffect(() => {
-    const loadedProfile = getMockProfile(userAddress);
-    setProfile(loadedProfile);
+    const loadProfile = async () => {
+      const loadedProfile = await getMockProfile(userAddress);
+      setProfile(loadedProfile);
+    };
+    loadProfile();
   }, [userAddress]);
 
   // Listen for profile updates
   useEffect(() => {
-    const handleProfileUpdate = (event: CustomEvent) => {
-      if (event.detail.walletAddress === userAddress) {
-        const updatedProfile = getMockProfile(userAddress);
+    const handleProfileUpdate = async (event: Event) => {
+      const customEvent = event as CustomEvent;
+      if (customEvent.detail.walletAddress === userAddress) {
+        const updatedProfile = await getMockProfile(userAddress);
         setProfile(updatedProfile);
         setLastUpdate(Date.now()); // Force re-render
       }
     };
     
-    window.addEventListener('profileUpdated', handleProfileUpdate as EventListener);
+    window.addEventListener('profileUpdated', handleProfileUpdate);
     return () => {
-      window.removeEventListener('profileUpdated', handleProfileUpdate as EventListener);
+      window.removeEventListener('profileUpdated', handleProfileUpdate);
     };
   }, [userAddress]);
   
@@ -59,7 +64,7 @@ export function EonIdClient() {
     );
   };
 
-  const handleProfileUpdate = (updatedProfile: MockProfile) => {
+  const handleProfileUpdate = (updatedProfile: UserProfile) => {
     setProfile(updatedProfile);
     setLastUpdate(Date.now()); // Force re-render
   };

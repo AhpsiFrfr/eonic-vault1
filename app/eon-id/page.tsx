@@ -1,4 +1,4 @@
-// cursor: replace using protocol
+'use client';
 
 import React from 'react';
 import dynamic from 'next/dynamic';
@@ -9,5 +9,5 @@ const EnhancedEONIDProfilePage = dynamic(
 );
 
 export default function EONIDPage() {
-  return <EnhancedEONIDProfilePage />;
+  return <EnhancedEONIDProfilePage userId="default-user-id" />;
 } 
