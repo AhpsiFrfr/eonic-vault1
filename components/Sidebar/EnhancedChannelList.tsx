@@ -76,40 +76,44 @@ export function EnhancedChannelList({
   };
 
   const renderChannel = (channel: Channel) => (
-    <div key={channel.id} className="group">
-      <button
-        onClick={() => handleChannelClick(channel)}
-        onContextMenu={(e) => handleRightClick(e, { type: 'channel', item: channel })}
-        className={`group relative flex w-full items-center gap-2 rounded px-2 py-1.5 text-sm transition-all hover:bg-white/5 ${
-          (channel.type === 'text' ? activeChannelId === channel.id : activeVoiceChannelId === channel.id)
-            ? 'bg-white/10 text-white'
-            : 'text-gray-300 hover:text-white'
-        }`}
-      >
-        {channel.type === 'text' ? (
-          <FiHash className="h-4 w-4" />
-        ) : (
-          <FiVolume2 className="h-4 w-4" />
-        )}
-        
-        <span className="flex-1 truncate">{channel.name}</span>
-        
-        {channel.isLocked && (
-          <FiLock className="h-3 w-3 text-gray-400" />
-        )}
-        
-        {channel.unreadCount && channel.unreadCount > 0 && (
-          <div className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-xs font-bold text-white">
-            {channel.unreadCount > 99 ? '99+' : channel.unreadCount}
-          </div>
-        )}
+    <div key={channel.id} className="group relative">
+      <div className="flex items-center">
+        <button
+          onClick={() => handleChannelClick(channel)}
+          onContextMenu={(e) => handleRightClick(e, { type: 'channel', item: channel })}
+          className={`flex-1 flex items-center gap-2 rounded px-2 py-1.5 text-sm transition-all hover:bg-white/5 ${
+            (channel.type === 'text' ? activeChannelId === channel.id : activeVoiceChannelId === channel.id)
+              ? 'bg-white/10 text-white'
+              : 'text-gray-300 hover:text-white'
+          }`}
+        >
+          {channel.type === 'text' ? (
+            <FiHash className="h-4 w-4" />
+          ) : (
+            <FiVolume2 className="h-4 w-4" />
+          )}
+          
+          <span className="flex-1 truncate">{channel.name}</span>
+          
+          {channel.isLocked && (
+            <FiLock className="h-3 w-3 text-gray-400" />
+          )}
+          
+          {channel.unreadCount && channel.unreadCount > 0 && (
+            <div className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-xs font-bold text-white">
+              {channel.unreadCount > 99 ? '99+' : channel.unreadCount}
+            </div>
+          )}
+        </button>
 
-        {/* Overflow Menu */}
-        <OverflowMenu
-          target={{ type: 'channel', item: channel }}
-          onOpenContextMenu={handleContextMenuFromOverflow}
-        />
-      </button>
+        {/* Overflow Menu - Outside the button */}
+        <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+          <OverflowMenu
+            target={{ type: 'channel', item: channel }}
+            onOpenContextMenu={handleContextMenuFromOverflow}
+          />
+        </div>
+      </div>
       
       {/* Voice Room Component for Active Voice Channels */}
       {showVoiceRooms && 
@@ -130,27 +134,31 @@ export function EnhancedChannelList({
     // Always show categories, even if empty
     return (
       <div key={category.id} className="mb-4">
-        <button
-          onClick={() => toggleCategoryCollapse(category.id)}
-          onContextMenu={(e) => handleRightClick(e, { type: 'category', item: category })}
-          className="mb-2 flex w-full items-center gap-1 px-2 text-xs font-semibold uppercase text-gray-400 hover:text-gray-300 transition-colors group"
-        >
-          {category.collapsed ? (
-            <FiChevronRight className="h-3 w-3" />
-          ) : (
-            <FiChevronDown className="h-3 w-3" />
-          )}
-          <span className="flex-1 text-left">{category.name}</span>
+        <div className="group relative flex items-center">
+          <button
+            onClick={() => toggleCategoryCollapse(category.id)}
+            onContextMenu={(e) => handleRightClick(e, { type: 'category', item: category })}
+            className="flex-1 flex items-center gap-1 px-2 text-xs font-semibold uppercase text-gray-400 hover:text-gray-300 transition-colors"
+          >
+            {category.collapsed ? (
+              <FiChevronRight className="h-3 w-3" />
+            ) : (
+              <FiChevronDown className="h-3 w-3" />
+            )}
+            <span className="flex-1 text-left">{category.name}</span>
+          </button>
           
-          {/* Category Overflow Menu */}
-          <OverflowMenu
-            target={{ type: 'category', item: category }}
-            onOpenContextMenu={handleContextMenuFromOverflow}
-          />
-        </button>
+          {/* Category Overflow Menu - Outside the button */}
+          <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+            <OverflowMenu
+              target={{ type: 'category', item: category }}
+              onOpenContextMenu={handleContextMenuFromOverflow}
+            />
+          </div>
+        </div>
         
         {!category.collapsed && (
-          <div className="space-y-0.5">
+          <div className="space-y-0.5 mt-2">
             {categoryChannels.length > 0 ? (
               categoryChannels.map(renderChannel)
             ) : (
