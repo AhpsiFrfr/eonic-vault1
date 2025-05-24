@@ -38,41 +38,12 @@ export const WalletProviderComponent: FC<Props> = ({ children }) => {
 
   // Monitor connection state to help debug navigation issues
   useEffect(() => {
-    console.log('[WALLET PROVIDER] Provider component mounted, autoConnect =', true);
-    
-    // Simpler wallet checking that won't cause navigation issues
-    const checkWalletStatus = () => {
-      try {
-        const isPhantomConnected = window.solana?.isConnected;
-        
-        console.log('[WALLET PROVIDER] Wallet check:', { 
-          exists: !!window.solana, 
-          isConnected: isPhantomConnected 
-        });
-        
-        // Simplified localStorage handling
-        if (isPhantomConnected) {
-          localStorage.setItem('walletConnected', 'true');
-        }
-      } catch (e) {
-        console.error('[WALLET PROVIDER] Error checking wallet status:', e);
-      }
-    };
-    
-    // Only check on mount - remove intervals to prevent excessive checks
-    checkWalletStatus();
-    
-    // Listen for visibility changes only
-    document.addEventListener('visibilitychange', checkWalletStatus);
-    
-    return () => {
-      document.removeEventListener('visibilitychange', checkWalletStatus);
-    };
+    console.log('[WALLET PROVIDER] Provider component mounted, autoConnect =', false);
   }, []);
 
   return (
     <ConnectionProvider endpoint={endpoint}>
-      <WalletProvider wallets={wallets} autoConnect={true}>
+      <WalletProvider wallets={wallets} autoConnect={false}>
         <WalletModalProvider>{children}</WalletModalProvider>
       </WalletProvider>
     </ConnectionProvider>

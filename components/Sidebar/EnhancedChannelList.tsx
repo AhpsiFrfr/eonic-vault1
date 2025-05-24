@@ -127,8 +127,7 @@ export function EnhancedChannelList({
       .filter(c => c.categoryId === category.id)
       .sort((a, b) => a.position - b.position);
 
-    if (categoryChannels.length === 0) return null;
-
+    // Always show categories, even if empty
     return (
       <div key={category.id} className="mb-4">
         <button
@@ -152,7 +151,13 @@ export function EnhancedChannelList({
         
         {!category.collapsed && (
           <div className="space-y-0.5">
-            {categoryChannels.map(renderChannel)}
+            {categoryChannels.length > 0 ? (
+              categoryChannels.map(renderChannel)
+            ) : (
+              <div className="px-2 py-1 text-xs text-gray-500 italic">
+                No channels yet - right-click to add
+              </div>
+            )}
           </div>
         )}
       </div>

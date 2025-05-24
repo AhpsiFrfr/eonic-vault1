@@ -23,16 +23,16 @@ export default function ChatView() {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      content: 'Welcome to the Dev Vault chat!',
+      content: "Welcome to VaultCord! Advanced voice features are now online.",
       author: {
-        name: 'System',
-        avatar: '/images/icons/system.png',
+        name: 'VAULTCORD_BOT',
+        avatar: '/images/icons/system.svg',
       },
-      timestamp: new Date(),
+      timestamp: new Date(Date.now() - 3600000),
       reactions: [
-        { emoji: '👋', count: 3, reacted: true },
-        { emoji: '❤️', count: 2, reacted: false },
-      ],
+        { emoji: '🎤', count: 5, reacted: false },
+        { emoji: '🚀', count: 3, reacted: true }
+      ]
     },
   ]);
   const [inputValue, setInputValue] = useState('');
@@ -55,7 +55,7 @@ export default function ChatView() {
       content: inputValue,
       author: {
         name: 'You',
-        avatar: '/images/avatars/default.png',
+        avatar: '/images/avatars/default.svg',
       },
       timestamp: new Date(),
     };

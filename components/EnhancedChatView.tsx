@@ -30,7 +30,7 @@ const mockMessages: Record<string, Message[]> = {
       content: 'Welcome to the general channel! This is where we discuss everything.',
       author: {
         name: 'EONIC Bot',
-        avatar: '/images/icons/system.png',
+        avatar: '/images/icons/system.svg',
         color: '#00FFAA'
       },
       timestamp: new Date(Date.now() - 1000 * 60 * 30),
@@ -45,7 +45,7 @@ const mockMessages: Record<string, Message[]> = {
       content: 'The new features are looking great! Really excited about the direction.',
       author: {
         name: 'DevUser',
-        avatar: '/images/avatars/default.png',
+        avatar: '/images/avatars/default.svg',
         color: '#3B82F6'
       },
       timestamp: new Date(Date.now() - 1000 * 60 * 15),
@@ -58,7 +58,7 @@ const mockMessages: Record<string, Message[]> = {
       content: 'Just pushed the latest updates to the staging branch. Ready for review!',
       author: {
         name: 'TechLead',
-        avatar: '/images/avatars/default.png',
+        avatar: '/images/avatars/default.svg',
         color: '#F59E0B'
       },
       timestamp: new Date(Date.now() - 1000 * 60 * 20),
@@ -73,7 +73,7 @@ const mockMessages: Record<string, Message[]> = {
       content: 'The performance improvements look solid. Database queries are 40% faster.',
       author: {
         name: 'BackendDev',
-        avatar: '/images/avatars/default.png',
+        avatar: '/images/avatars/default.svg',
         color: '#10B981'
       },
       timestamp: new Date(Date.now() - 1000 * 60 * 5),
@@ -86,7 +86,7 @@ const mockMessages: Record<string, Message[]> = {
       content: '🎉 EONIC Vault v2.0 is now live! Check out the new features in the dashboard.',
       author: {
         name: 'Admin',
-        avatar: '/images/avatars/default.png',
+        avatar: '/images/avatars/default.svg',
         color: '#EF4444'
       },
       timestamp: new Date(Date.now() - 1000 * 60 * 60),
@@ -126,7 +126,7 @@ export function EnhancedChatView() {
       content: inputValue,
       author: {
         name: 'You',
-        avatar: '/images/avatars/default.png',
+        avatar: '/images/avatars/default.svg',
         color: '#8B5CF6'
       },
       timestamp: new Date(),

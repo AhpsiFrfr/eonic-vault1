@@ -140,7 +140,14 @@ export function ChannelProvider({ children }: ChannelProviderProps) {
       position
     };
 
-    setCategories(prev => [...prev, category]);
+    console.log('Adding new category to state:', category);
+    console.log('Current categories before:', categories);
+    
+    setCategories(prev => {
+      const updated = [...prev, category];
+      console.log('Updated categories:', updated);
+      return updated;
+    });
   }, [categories]);
 
   const updateCategory = useCallback((categoryId: string, updates: Partial<Category>) => {

@@ -38,6 +38,7 @@ export function LogoChannelManager({
         description: `${newChannelType === 'text' ? 'Text' : 'Voice'} channel for ${newItemName}`
       });
     } else {
+      console.log('Creating category from logo panel:', newItemName);
       createCategory({
         name: newItemName,
         collapsed: false

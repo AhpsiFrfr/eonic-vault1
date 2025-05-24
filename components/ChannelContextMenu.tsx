@@ -85,6 +85,7 @@ export function ChannelContextMenu({ x, y, onClose, target }: ContextMenuProps) 
   const handleCreateCategory = () => {
     if (!newItemName.trim()) return;
 
+    console.log('Creating category:', newItemName);
     createCategory({
       name: newItemName,
       collapsed: false
