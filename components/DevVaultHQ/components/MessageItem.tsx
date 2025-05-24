@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { DevHQMessage } from '../../../types/devhq-chat';
 import { FiMessageSquare, FiEdit2, FiTrash2, FiDownload, FiSmile, FiMoreHorizontal } from 'react-icons/fi';
 import { motion, AnimatePresence } from 'framer-motion';
+import MessageActionsMenu from './MessageActionsMenu';
+import ReactionsBar from './ReactionsBar';
 
 interface MessageItemProps {
   message: DevHQMessage;
@@ -28,9 +30,10 @@ const MessageItem: React.FC<MessageItemProps> = ({
   onEnicSuggest,
   status = 'sent' 
 }) => {
-  const [showActions, setShowActions] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
+  const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null);
+  const messageRef = useRef<HTMLDivElement>(null);
   
   const formattedTime = new Date(message.timestamp).toLocaleTimeString([], { 
     hour: '2-digit', 
@@ -39,48 +42,120 @@ const MessageItem: React.FC<MessageItemProps> = ({
 
   const isCurrentUser = message.senderId === currentUserId;
 
-  const handleReaction = (emoji: string) => {
-    onReact?.(message.id, emoji);
-    setShowEmojiPicker(false);
-  };
+  // Get user's current reactions for this message
+  const currentUserReactions = Object.entries(message.reactions)
+    .filter(([_, userIds]) => userIds.includes(currentUserId))
+    .map(([emoji]) => emoji);
 
-  const handleEdit = () => {
+  // Handle cursor-based menu positioning
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setMenuPosition({ x: e.clientX, y: e.clientY });
+    setShowMenu(true);
+  }, []);
+
+  const handleMouseEnter = useCallback((e: React.MouseEvent) => {
+    // On desktop, show menu on hover
+    if (window.innerWidth > 768) {
+      const rect = e.currentTarget.getBoundingClientRect();
+      setMenuPosition({ 
+        x: e.clientX || rect.right - 50, 
+        y: e.clientY || rect.top - 10 
+      });
+      setShowMenu(true);
+    }
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    // Hide menu when mouse leaves, but with a small delay to allow interaction
+    setTimeout(() => {
+      if (!document.querySelector('[data-menu-hover="true"]')) {
+        setShowMenu(false);
+      }
+    }, 150);
+  }, []);
+
+  // Long press for mobile
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    const timer = setTimeout(() => {
+      const touch = e.touches[0];
+      setMenuPosition({ x: touch.clientX, y: touch.clientY });
+      setShowMenu(true);
+      navigator.vibrate?.(50); // Haptic feedback if available
+    }, 500);
+    setLongPressTimer(timer);
+  }, []);
+
+  const handleTouchEnd = useCallback(() => {
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      setLongPressTimer(null);
+    }
+  }, [longPressTimer]);
+
+  // Action handlers
+  const handleReaction = useCallback((emoji: string) => {
+    onReact?.(message.id, emoji);
+  }, [message.id, onReact]);
+
+  const handleReply = useCallback(() => {
+    onReply?.(message.id, '');
+    setShowMenu(false);
+  }, [message.id, onReply]);
+
+  const handleEdit = useCallback(() => {
     const newContent = prompt('Edit message:', message.content);
     if (newContent && newContent !== message.content) {
       onEdit?.(message.id, newContent);
     }
     setShowMenu(false);
-  };
+  }, [message.id, message.content, onEdit]);
 
-  const handleDelete = () => {
+  const handleDelete = useCallback(() => {
     if (confirm('Delete this message?')) {
       onDelete?.(message.id);
     }
     setShowMenu(false);
-  };
+  }, [message.id, onDelete]);
 
-  const handleReply = () => {
-    onReply?.(message.id, '');
-    setShowMenu(false);
-  };
-
-  const handleEnicSummarize = () => {
+  const handleEnicSummarize = useCallback(() => {
     onEnicSummarize?.(message.id);
     setShowMenu(false);
-  };
+  }, [message.id, onEnicSummarize]);
 
-  const handleEnicSuggest = () => {
+  const handleEnicSuggest = useCallback(() => {
     onEnicSuggest?.(message.id);
     setShowMenu(false);
-  };
+  }, [message.id, onEnicSuggest]);
 
-  const isImageFile = (file: { type: string }) => {
-    return file.type.startsWith('image/');
-  };
+  const handleCopyLink = useCallback(() => {
+    navigator.clipboard?.writeText(`${window.location.origin}/message/${message.id}`);
+    setShowMenu(false);
+  }, [message.id]);
 
-  const isVideoFile = (file: { type: string }) => {
-    return file.type.startsWith('video/');
-  };
+  const handleCopyText = useCallback(() => {
+    navigator.clipboard?.writeText(message.content);
+    setShowMenu(false);
+  }, [message.content]);
+
+  const handleForward = useCallback(() => {
+    console.log('Forward message:', message.id);
+    setShowMenu(false);
+  }, [message.id]);
+
+  const handleReport = useCallback(() => {
+    console.log('Report message:', message.id);
+    setShowMenu(false);
+  }, [message.id]);
+
+  const handleSelect = useCallback(() => {
+    console.log('Select message:', message.id);
+    setShowMenu(false);
+  }, [message.id]);
+
+  // File helper functions
+  const isImageFile = (file: { type: string }) => file.type.startsWith('image/');
+  const isVideoFile = (file: { type: string }) => file.type.startsWith('video/');
 
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return '0 Bytes';
@@ -90,24 +165,26 @@ const MessageItem: React.FC<MessageItemProps> = ({
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  // Telegram-style emoji reactions
-  const quickEmojis = ['👍', '👎', '❤️', '🔥', '🥰', '👏', '😂', '😮', '😢', '😡', '🤔', '🎉'];
-
   return (
-    <div className="group relative">
+    <>
       <motion.div
+        ref={messageRef}
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
-        className={`flex ${isCurrentUser ? 'justify-end' : ''}`}
-        onMouseEnter={() => setShowActions(true)}
-        onMouseLeave={() => setShowActions(false)}
+        className={`group flex ${isCurrentUser ? 'justify-end' : ''} relative`}
+        onContextMenu={handleContextMenu}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
       >
         <div className={`max-w-[80%] ${
           isCurrentUser 
             ? 'bg-cyan-900/40 text-white' 
             : 'bg-gray-800 text-white'
-        } rounded-lg p-3 relative`}>
+        } rounded-lg p-3 relative transition-all duration-200 hover:shadow-lg cursor-pointer`}>
+          
           {isFirstInGroup && (
             <div className="flex items-center mb-1">
               <span className="font-semibold text-sm text-cyan-400">
@@ -177,12 +254,14 @@ const MessageItem: React.FC<MessageItemProps> = ({
             </div>
           )}
 
-          {/* Reactions */}
+          {/* Existing Reactions Display */}
           {Object.keys(message.reactions).length > 0 && (
             <div className="flex flex-wrap gap-1 mt-2">
               {Object.entries(message.reactions).map(([emoji, userIds]) => (
-                <button
+                <motion.button
                   key={emoji}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                   onClick={() => handleReaction(emoji)}
                   className={`px-2 py-1 rounded-full text-xs flex items-center gap-1 transition-colors ${
                     userIds.includes(currentUserId)
@@ -192,155 +271,63 @@ const MessageItem: React.FC<MessageItemProps> = ({
                 >
                   <span>{emoji}</span>
                   <span>{userIds.length}</span>
-                </button>
+                </motion.button>
               ))}
             </div>
           )}
         </div>
-
-        {/* Quick Action Buttons - Telegram Style */}
-        <AnimatePresence>
-          {showActions && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              transition={{ duration: 0.15 }}
-              className={`absolute top-0 ${
-                isCurrentUser ? '-left-24' : '-right-24'
-              } bg-gray-800 rounded-lg shadow-lg flex items-center p-1 border border-gray-600 z-20`}
-            >
-              {/* Reply */}
-              <button 
-                onClick={handleReply}
-                className="p-2 hover:bg-gray-700 rounded-md text-gray-300 hover:text-white transition-colors"
-                title="Reply"
-              >
-                <FiMessageSquare size={16} />
-              </button>
-
-              {/* React */}
-              <button 
-                onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                className="p-2 hover:bg-gray-700 rounded-md text-gray-300 hover:text-yellow-400 transition-colors"
-                title="React"
-              >
-                <FiSmile size={16} />
-              </button>
-
-              {/* More Menu */}
-              <button 
-                onClick={() => setShowMenu(!showMenu)}
-                className="p-2 hover:bg-gray-700 rounded-md text-gray-300 hover:text-white transition-colors"
-                title="More"
-              >
-                <FiMoreHorizontal size={16} />
-              </button>
-            </motion.div>
-          )}
-        </AnimatePresence>
       </motion.div>
 
-      {/* Emoji Picker - Telegram Style */}
-      <AnimatePresence>
-        {showEmojiPicker && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.2 }}
-            className={`absolute ${
-              isCurrentUser ? 'right-0' : 'left-0'
-            } top-0 bg-gray-800 border border-gray-600 rounded-lg p-2 shadow-lg z-30 min-w-0`}
-          >
-            <div className="grid grid-cols-6 gap-1 max-w-xs">
-              {quickEmojis.map(emoji => (
-                <button
-                  key={emoji}
-                  onClick={() => handleReaction(emoji)}
-                  className="hover:bg-gray-700 p-2 rounded text-lg transition-colors hover:scale-110"
-                  title={`React with ${emoji}`}
-                >
-                  {emoji}
-                </button>
-              ))}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Context Menu - Telegram Style */}
+      {/* Floating Menu Portal */}
       <AnimatePresence>
         {showMenu && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.2 }}
-            className={`absolute ${
-              isCurrentUser ? 'right-0' : 'left-0'
-            } top-0 bg-gray-800 border border-gray-600 rounded-lg shadow-lg z-30 min-w-48`}
-          >
-            <div className="py-1">
-              <button
-                onClick={handleReply}
-                className="w-full text-left px-3 py-2 hover:bg-gray-700 transition-colors flex items-center gap-2"
-              >
-                <FiMessageSquare size={16} />
-                Reply
-              </button>
+          <>
+            {/* Overlay to close menu */}
+            <div 
+              className="fixed inset-0 z-[9998]"
+              onClick={() => setShowMenu(false)}
+            />
+            
+            {/* Menu Container */}
+            <div 
+              data-menu-hover="true"
+              onMouseEnter={() => setShowMenu(true)}
+              onMouseLeave={() => setShowMenu(false)}
+              style={{ position: 'fixed', zIndex: 9999 }}
+            >
+              {/* Reactions Bar */}
+              <div style={{
+                position: 'fixed',
+                left: menuPosition.x,
+                top: menuPosition.y - 80,
+                zIndex: 9999
+              }}>
+                <ReactionsBar 
+                  onReact={handleReaction}
+                  currentUserReactions={currentUserReactions}
+                />
+              </div>
 
-              {isCurrentUser && (
-                <>
-                  <button
-                    onClick={handleEdit}
-                    className="w-full text-left px-3 py-2 hover:bg-gray-700 transition-colors flex items-center gap-2"
-                  >
-                    <FiEdit2 size={16} />
-                    Edit
-                  </button>
-                  <button
-                    onClick={handleDelete}
-                    className="w-full text-left px-3 py-2 hover:bg-gray-700 transition-colors flex items-center gap-2 text-red-400"
-                  >
-                    <FiTrash2 size={16} />
-                    Delete
-                  </button>
-                  <hr className="border-gray-600 my-1" />
-                </>
-              )}
-
-              <button
-                onClick={handleEnicSummarize}
-                className="w-full text-left px-3 py-2 hover:bg-gray-700 transition-colors flex items-center gap-2 text-cyan-400"
-              >
-                <span className="text-sm font-bold">🤖</span>
-                ENIC.0 Summarize
-              </button>
-
-              <button
-                onClick={handleEnicSuggest}
-                className="w-full text-left px-3 py-2 hover:bg-gray-700 transition-colors flex items-center gap-2 text-cyan-400"
-              >
-                <span className="text-sm font-bold">💡</span>
-                ENIC.0 Suggest
-              </button>
+              {/* Actions Menu */}
+              <MessageActionsMenu
+                position={menuPosition}
+                isCurrentUser={isCurrentUser}
+                onReply={handleReply}
+                onEnicSummarize={handleEnicSummarize}
+                onEnicSuggest={handleEnicSuggest}
+                onCopyLink={handleCopyLink}
+                onCopyText={handleCopyText}
+                onForward={handleForward}
+                onReport={handleReport}
+                onSelect={handleSelect}
+                onEdit={isCurrentUser ? handleEdit : undefined}
+                onDelete={isCurrentUser ? handleDelete : undefined}
+              />
             </div>
-          </motion.div>
+          </>
         )}
       </AnimatePresence>
-
-      {/* Click outside to close menus */}
-      {(showMenu || showEmojiPicker) && (
-        <div 
-          className="fixed inset-0 z-10"
-          onClick={() => {
-            setShowMenu(false);
-            setShowEmojiPicker(false);
-          }}
-        />
-      )}
-    </div>
+    </>
   );
 };
 
