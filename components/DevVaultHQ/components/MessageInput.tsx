@@ -1,238 +1,127 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
-import { FiSmile, FiCode, FiSlash } from 'react-icons/fi';
-import { motion, AnimatePresence } from 'framer-motion';
-import EmojiPicker from 'emoji-picker-react';
-import { markdownToHTML } from '@/lib/utils/markdown';
+import React, { useState, useRef } from 'react';
+import { DevHQMessage } from '../../../types/devhq-chat';
+import { FiSend, FiPaperclip, FiMic } from 'react-icons/fi';
 
-interface SlashCommand {
-  command: string;
-  description: string;
-  action: () => void;
+interface MessageInputProps {
+  onSendMessage: (content: string, files?: File[]) => void;
+  placeholder?: string;
+  disabled?: boolean;
 }
 
-export default function MessageInput({ onSend }: { onSend: (msg: string) => void }) {
-  const [text, setText] = useState('');
-  const [showEmoji, setShowEmoji] = useState(false);
-  const [showPreview, setShowPreview] = useState(false);
-  const [showSlashMenu, setShowSlashMenu] = useState(false);
-  const [glowPreview, setGlowPreview] = useState(true);
+const MessageInput: React.FC<MessageInputProps> = ({ 
+  onSendMessage, 
+  placeholder = 'Type a message...', 
+  disabled = false 
+}) => {
+  const [message, setMessage] = useState('');
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const slashCommands: SlashCommand[] = [
-    {
-      command: '/clear',
-      description: 'Clears chat history',
-      action: () => {
-        // Implement clear action
-        setText('');
-      }
-    },
-    {
-      command: '/debug',
-      description: 'Opens Dev Debug Panel',
-      action: () => {
-        // Implement debug action
-        onSend('/debug');
-      }
-    },
-    {
-      command: '/simulate',
-      description: 'Spawns fake users for testing',
-      action: () => {
-        // Implement simulate action
-        onSend('/simulate');
-      }
-    },
-    {
-      command: '/ping',
-      description: 'Echo test',
-      action: () => {
-        onSend('/ping');
-      }
-    }
-  ];
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!message.trim() && selectedFiles.length === 0) return;
 
-  const handleEmojiClick = (emojiData: any) => {
-    const cursor = inputRef.current?.selectionStart || text.length;
-    const newText = text.slice(0, cursor) + emojiData.emoji + text.slice(cursor);
-    setText(newText);
-    setShowEmoji(false);
-    inputRef.current?.focus();
+    onSendMessage(message, selectedFiles);
+    setMessage('');
+    setSelectedFiles([]);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      if (text.trim()) {
-        onSend(text.trim());
-        setText('');
-        setShowPreview(false);
-      }
-    }
-
-    if (e.key === '/' && text.length === 0) {
-      setShowSlashMenu(true);
-    }
-
-    if (e.key === 'Escape') {
-      setShowEmoji(false);
-      setShowSlashMenu(false);
+      handleSubmit(e);
     }
   };
 
-  const executeSlashCommand = (command: SlashCommand) => {
-    command.action();
-    setShowSlashMenu(false);
-    inputRef.current?.focus();
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    setSelectedFiles(prev => [...prev, ...files]);
+  };
+
+  const removeFile = (index: number) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   return (
-    <div className="relative bg-[#0f0f0f] p-3 rounded-xl border border-[#222] shadow-[0_0_15px_rgba(0,0,0,0.3)]">
-      <div className="flex items-center gap-2 mb-2">
-        <button 
-          onClick={() => setShowEmoji(!showEmoji)}
-          className="p-2 hover:bg-blue-900/20 rounded-lg transition-colors"
-        >
-          <FiSmile className="text-blue-400" />
-        </button>
-        <button 
-          onClick={() => setShowSlashMenu(!showSlashMenu)}
-          className="p-2 hover:bg-blue-900/20 rounded-lg transition-colors"
-        >
-          <FiSlash className="text-blue-400" />
-        </button>
-        <button 
-          onClick={() => setShowPreview(!showPreview)}
-          className="p-2 hover:bg-blue-900/20 rounded-lg transition-colors"
-        >
-          <FiCode className="text-blue-400" />
-        </button>
-        <button 
-          onClick={() => setGlowPreview(!glowPreview)}
-          className="p-2 hover:bg-blue-900/20 rounded-lg transition-colors"
-        >
-          <span className={`text-xl ${glowPreview ? 'text-[#00f0ff] animate-pulse' : 'text-gray-400'}`}>
-            ✨
-          </span>
-        </button>
-      </div>
-
-      <AnimatePresence>
-        {showEmoji && (
-          <motion.div 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 10 }}
-            className="absolute bottom-full left-0 mb-2 z-50"
-          >
-            <div className="bg-[#111] rounded-lg p-2 shadow-[0_0_20px_rgba(0,0,0,0.5)]">
-              <EmojiPicker onEmojiClick={handleEmojiClick} />
+    <div className="p-4 border-t border-gray-700 bg-gray-900">
+      {/* File previews */}
+      {selectedFiles.length > 0 && (
+        <div className="mb-3 flex flex-wrap gap-2">
+          {selectedFiles.map((file, index) => (
+            <div key={index} className="flex items-center gap-2 bg-gray-800 rounded-lg px-3 py-2">
+              <span className="text-sm text-gray-300">{file.name}</span>
+              <button
+                onClick={() => removeFile(index)}
+                className="text-gray-400 hover:text-red-400 transition-colors"
+              >
+                ×
+              </button>
             </div>
-          </motion.div>
-        )}
-
-        {showSlashMenu && (
-          <motion.div 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 10 }}
-            className="absolute left-0 top-full mt-2 bg-[#111] text-white p-3 rounded-lg shadow-[0_0_20px_rgba(0,0,0,0.5)] z-50 w-64"
-          >
-            <p className="text-sm text-blue-400 mb-2">Slash Commands</p>
-            <ul className="space-y-1">
-              {slashCommands.map((cmd) => (
-                <li 
-                  key={cmd.command}
-                  onClick={() => executeSlashCommand(cmd)}
-                  className="flex items-center justify-between p-2 hover:bg-blue-900/20 rounded cursor-pointer transition-colors"
-                >
-                  <span className="font-mono text-sm">{cmd.command}</span>
-                  <span className="text-xs text-gray-400">{cmd.description}</span>
-                </li>
-              ))}
-            </ul>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {!showPreview ? (
-        <textarea
-          ref={inputRef}
-          value={text}
-          onChange={e => setText(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Type a message... (/ for commands)"
-          className="w-full bg-transparent text-white resize-none outline-none placeholder-gray-500"
-          rows={3}
-        />
-      ) : (
-        <div
-          className={`bg-[#111] text-white p-2 rounded overflow-auto max-h-48 markdown-preview prose prose-invert prose-sm ${
-            glowPreview ? 'glow-fx' : ''
-          }`}
-          dangerouslySetInnerHTML={{ __html: markdownToHTML(text) }}
-        />
+          ))}
+        </div>
       )}
 
-      <style jsx global>{`
-        .glow-fx {
-          color: #ffffff;
-          text-shadow:
-            0 0 4px rgba(0, 255, 255, 0.7),
-            0 0 8px rgba(0, 200, 255, 0.5),
-            0 0 12px rgba(0, 100, 255, 0.4);
-          transition: text-shadow 0.3s ease-in-out;
-        }
+      <form onSubmit={handleSubmit} className="relative">
+        <div className="flex items-end gap-2">
+          <div className="flex-1 relative">
+            <textarea
+              ref={inputRef}
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              onKeyDown={handleKeyPress}
+              placeholder={placeholder}
+              disabled={disabled}
+              className="w-full bg-gray-800 border border-gray-600 rounded-lg px-4 py-3 pr-12 text-white placeholder-gray-400 resize-none focus:outline-none focus:border-cyan-500 transition-colors"
+              rows={1}
+              style={{ minHeight: '48px', maxHeight: '120px' }}
+            />
+          </div>
 
-        .glow-fx h1,
-        .glow-fx h2,
-        .glow-fx h3,
-        .glow-fx strong {
-          color: #ffffff;
-          text-shadow:
-            0 0 4px rgba(255, 255, 255, 0.9),
-            0 0 8px rgba(0, 255, 255, 0.3);
-        }
+          {/* Action buttons */}
+          <div className="flex items-center gap-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              onChange={handleFileSelect}
+              className="hidden"
+              accept="image/*,video/*,.pdf,.doc,.docx,.txt"
+            />
+            
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="p-3 text-gray-400 hover:text-cyan-400 transition-colors"
+              title="Attach files"
+            >
+              <FiPaperclip size={20} />
+            </button>
 
-        .glow-fx code,
-        .glow-fx pre {
-          background: rgba(26, 26, 26, 0.8);
-          box-shadow: 0 0 10px rgba(0, 255, 255, 0.1);
-        }
+            <button
+              type="button"
+              className="p-3 text-gray-400 hover:text-cyan-400 transition-colors"
+              title="Voice message"
+            >
+              <FiMic size={20} />
+            </button>
 
-        .glow-fx a {
-          color: #00f0ff;
-          text-shadow:
-            0 0 4px rgba(0, 255, 255, 0.7),
-            0 0 8px rgba(0, 200, 255, 0.5);
-        }
-
-        .glow-fx blockquote {
-          border-left-color: #00f0ff;
-          box-shadow: -2px 0 8px rgba(0, 255, 255, 0.2);
-        }
-
-        .markdown-preview pre {
-          background: #1a1a1a;
-          padding: 0.5rem;
-          border-radius: 0.5rem;
-          overflow-x: auto;
-        }
-        .markdown-preview code {
-          background: #1a1a1a;
-          padding: 0.2rem 0.4rem;
-          border-radius: 0.25rem;
-        }
-        .markdown-preview a {
-          color: #60a5fa;
-          text-decoration: none;
-        }
-        .markdown-preview a:hover {
-          text-decoration: underline;
-        }
-      `}</style>
+            <button
+              type="submit"
+              disabled={(!message.trim() && selectedFiles.length === 0) || disabled}
+              className="p-3 bg-cyan-600 hover:bg-cyan-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+              title="Send message"
+            >
+              <FiSend size={20} />
+            </button>
+          </div>
+        </div>
+      </form>
     </div>
   );
-} 
+};
+
+export default MessageInput; 
