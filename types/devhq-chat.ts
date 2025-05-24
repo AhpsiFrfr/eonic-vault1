@@ -2,7 +2,14 @@ export interface DevHQUser {
   id: string;
   username: string;
   avatar?: string;
-  status?: 'online' | 'offline' | 'away';
+  status: 'online' | 'away' | 'busy' | 'offline';
+}
+
+export interface DevHQMessageFile {
+  name: string;
+  url: string;
+  type: string;
+  size: number;
 }
 
 export interface DevHQMessage {
@@ -10,25 +17,23 @@ export interface DevHQMessage {
   senderId: string;
   content: string;
   timestamp: number;
-  reactions: { [key: string]: string[] };
-  threadId?: string;
-  parentId?: string;
+  reactions: { [emoji: string]: string[] };
+  type: 'text' | 'system' | 'file';
+  channelId?: string;
+  files?: DevHQMessageFile[];
+  replyTo?: string;
   isEdited?: boolean;
-  type?: 'text' | 'file' | 'system';
-  files?: {
-    name: string;
-    url: string;
-    type: string;
-    size: number;
-  }[];
+  editedAt?: number;
 }
 
 export interface DevHQThread {
   id: string;
+  name: string;
   parentMessageId: string;
-  messages: DevHQMessage[];
-  participantIds: string[];
-  lastActivityAt: number;
+  channelId: string;
+  createdBy: string;
+  createdAt: number;
+  isArchived?: boolean;
 }
 
 export interface DevHQSearchFilters {
@@ -39,6 +44,6 @@ export interface DevHQSearchFilters {
 
 export interface DevHQMessageStatus {
   messageId: string;
-  status: 'sent' | 'delivered' | 'seen';
+  status: 'sending' | 'sent' | 'delivered' | 'failed';
   timestamp: number;
 } 
