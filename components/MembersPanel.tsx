@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { Users } from 'lucide-react';
-import { BusinessCardPanel } from './BusinessCardPanel';
+import { EonIDPanel } from './EonIDPanel';
 import { useState } from 'react';
 import { getMockProfile } from '../utils/mock-data';
 
@@ -170,7 +170,7 @@ export function MembersPanel({ isOpen, onClose, onlineUsers, communityUsers }: M
 
           {/* Business Card Panel */}
           {selectedUser && (
-            <BusinessCardPanel
+            <EonIDPanel
               isOpen={!!selectedUser}
               onClose={() => setSelectedUser(null)}
               userData={{

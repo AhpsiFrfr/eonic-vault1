@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ContextMenu, ContextMenuItem } from './ContextMenu';
 import { GifPickerModal } from './GifPickerModal';
 import { StickerPickerModal } from './StickerPickerModal';
-import { BusinessCardPanel } from './BusinessCardPanel';
+import { EonIDPanel } from './EonIDPanel';
 import data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
 
@@ -190,7 +190,7 @@ export function MessageContextMenu({
 
       {/* Business Card Panel */}
       {showBusinessCard && message && (
-        <BusinessCardPanel
+        <EonIDPanel
           isOpen={showBusinessCard}
           onClose={() => {
             setShowBusinessCard(false);
