@@ -7,41 +7,139 @@ import { UserProfile } from './user';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder_key';
 
+// In-memory storage for mock data
+const mockMessages = new Map<string, any[]>();
+const mockDirectMessages = new Map<string, any[]>();
+const mockProfiles = new Map<string, any>();
+const inMemoryProfiles = new Map<string, any>();
+const inMemoryStorage = new Map<string, any>();
+
 // Create a mock client that doesn't make real network requests when using placeholders
 let supabase: any;
 
 if (supabaseUrl.includes('placeholder') || supabaseKey.includes('placeholder')) {
   console.log('[MOCK] Using mock Supabase implementation');
+  
+  // Enhanced mock client with proper method chaining
   supabase = {
-    from: () => ({
-      select: () => ({ 
-        eq: () => ({ 
-          single: () => Promise.resolve({ data: null, error: null }),
-          maybeSingle: () => Promise.resolve({ data: null, error: null })
+    from: (table: string) => ({
+      select: (columns: string = '*') => ({
+        eq: (column: string, value: any) => ({
+          single: async () => {
+            console.log(`[MOCK] ${table}.select('${columns}').eq('${column}', '${value}').single()`);
+            if (table === 'user_profiles') {
+              const profile = inMemoryProfiles.get(value);
+              return { data: profile || null, error: null };
+            }
+            return { data: null, error: null };
+          },
+          maybeSingle: async () => {
+            console.log(`[MOCK] ${table}.select('${columns}').eq('${column}', '${value}').maybeSingle()`);
+            return { data: null, error: null };
+          },
+          order: (orderColumn: string, options?: any) => ({
+            limit: (limitCount: number) => Promise.resolve({ data: [], error: null }),
+            then: (callback: any) => callback({ data: [], error: null })
+          }),
+          then: (callback: any) => callback({ data: [], error: null })
         }),
-        order: () => ({ 
-          limit: () => Promise.resolve({ data: [], error: null })
-        })
+        order: (column: string, options?: any) => ({
+          limit: (limitCount: number) => Promise.resolve({ data: [], error: null }),
+          then: (callback: any) => callback({ data: [], error: null })
+        }),
+        limit: (limitCount: number) => Promise.resolve({ data: [], error: null }),
+        is: (column: string, value: any) => Promise.resolve({ data: [], error: null }),
+        or: (condition: string) => Promise.resolve({ data: [], error: null }),
+        not: (column: string, operator: string, value: any) => ({
+          maybeSingle: async () => ({ data: null, error: null })
+        }),
+        then: (callback: any) => callback({ data: [], error: null })
       }),
-      insert: () => ({ 
-        select: () => ({ 
-          single: () => Promise.resolve({ data: null, error: null })
-        })
+      insert: (data: any) => ({
+        select: (columns: string = '*') => ({
+          single: async () => {
+            console.log(`[MOCK] ${table}.insert().select('${columns}').single()`);
+            const newRecord = { id: `mock-${Date.now()}`, created_at: new Date().toISOString(), ...data };
+            return { data: newRecord, error: null };
+          },
+          then: (callback: any) => callback({ data: null, error: null })
+        }),
+        then: (callback: any) => callback({ data: null, error: null })
       }),
-      update: () => ({ 
-        eq: () => Promise.resolve({ data: null, error: null })
+      update: (data: any) => ({
+        eq: (column: string, value: any) => Promise.resolve({ data: null, error: null }),
+        then: (callback: any) => callback({ data: null, error: null })
       }),
-      delete: () => ({ 
-        eq: () => Promise.resolve({ data: null, error: null })
+      delete: () => ({
+        eq: (column: string, value: any) => Promise.resolve({ data: null, error: null }),
+        then: (callback: any) => callback({ data: null, error: null })
+      }),
+      upsert: (data: any) => ({
+        select: (columns: string = '*') => ({
+          single: async () => {
+            console.log(`[MOCK] ${table}.upsert().select('${columns}').single()`);
+            if (table === 'user_profiles') {
+              const walletAddr = data.wallet_address || '';
+              const existingProfile = inMemoryProfiles.get(walletAddr);
+              const updatedProfile = existingProfile ? { ...existingProfile, ...data } : { id: `mock-${Date.now()}`, ...data };
+              inMemoryProfiles.set(walletAddr, updatedProfile);
+              return { data: updatedProfile, error: null };
+            }
+            return { data: { id: `mock-${Date.now()}`, ...data }, error: null };
+          },
+          then: (callback: any) => callback({ data: null, error: null })
+        }),
+        then: (callback: any) => callback({ data: null, error: null })
       })
     }),
-    auth: {
-      getSession: () => Promise.resolve({ data: { session: null }, error: null })
+    rpc: (fnName: string, params?: any) => {
+      console.log(`[MOCK] Calling RPC function: ${fnName}`, params);
+      return {
+        select: (columns: string = '*') => Promise.resolve({ data: [], error: null }),
+        then: (callback: any) => callback({ data: [], error: null })
+      };
     },
-    channel: () => ({
-      on: () => ({ subscribe: () => {} }),
-      subscribe: () => {}
-    })
+    auth: {
+      getSession: () => Promise.resolve({ data: { session: null }, error: null }),
+      signIn: () => Promise.resolve({ data: null, error: null }),
+      signOut: () => Promise.resolve({ error: null })
+    },
+    channel: (channelName: string) => {
+      console.log(`[MOCK] Creating channel: ${channelName}`);
+      return {
+        on: (event: string, options: any, callback?: any) => {
+          console.log(`[MOCK] Subscribing to ${event} on channel ${channelName}`);
+          return {
+            subscribe: () => {
+              console.log(`[MOCK] Subscribed to channel ${channelName}`);
+              return Promise.resolve();
+            }
+          };
+        },
+        subscribe: () => {
+          console.log(`[MOCK] Subscribed to channel ${channelName}`);
+          return Promise.resolve();
+        },
+        unsubscribe: () => {
+          console.log(`[MOCK] Unsubscribed from channel ${channelName}`);
+          return Promise.resolve();
+        }
+      };
+    },
+    storage: {
+      from: (bucket: string) => ({
+        upload: async (path: string, file: any) => {
+          console.log(`[MOCK] Uploading to ${bucket}/${path}`);
+          const key = `${bucket}/${path}`;
+          inMemoryStorage.set(key, file);
+          return { data: { path }, error: null };
+        },
+        getPublicUrl: (path: string) => {
+          const publicUrl = `/mock-storage/${bucket}/${path}`;
+          return { data: { publicUrl } };
+        }
+      })
+    }
   };
 } else {
   supabase = createClient(supabaseUrl, supabaseKey);
@@ -49,186 +147,40 @@ if (supabaseUrl.includes('placeholder') || supabaseKey.includes('placeholder')) 
 
 export { supabase };
 
-// Helper function to create a profile
+// Additional utility functions for backward compatibility
 export async function createProfile(walletAddress: string, data: Partial<UserProfile>) {
-  const timestamp = new Date().toISOString();
-  const newProfile = {
-    wallet_address: walletAddress,
-    display_name: `User-${walletAddress.substring(0, 6)}`,
-    title: 'EONIC Explorer',
-    bio: '',
-    wallet_tagline: '',
-    avatar_url: '/images/avatars/default.svg',
-    widget_list: ['display_name', 'timepiece', 'xp_level', 'nft_gallery'],
-    is_public: true,
-    timepiece_url: '/images/timepiece-nft.png',
-    timepiece_stage: 'Genesis',
-    timepiece_xp: 0,
-    created_at: timestamp,
-    updated_at: timestamp,
-    ...data
-  };
-
-  const { data: profile, error } = await supabase
-    .from('profiles')
-    .insert([newProfile])
-    .select()
-    .single();
-
-  if (error) throw error;
+  console.log(`[MOCK] Creating profile for ${walletAddress}`);
+  const profile = { id: `mock-${Date.now()}`, wallet_address: walletAddress, ...data };
+  inMemoryProfiles.set(walletAddress, profile);
   return profile;
 }
 
-// Helper function to update a profile
 export async function updateProfile(walletAddress: string, updates: Partial<UserProfile>) {
-  const { data, error } = await supabase
-    .from('profiles')
-    .update({
-      ...updates,
-      updated_at: new Date().toISOString()
-    })
-    .eq('wallet_address', walletAddress)
-    .select()
-    .single();
-
-  if (error) throw error;
-  return data;
+  console.log(`[MOCK] Updating profile for ${walletAddress}`);
+  const existing = inMemoryProfiles.get(walletAddress) || {};
+  const updated = { ...existing, ...updates };
+  inMemoryProfiles.set(walletAddress, updated);
+  return updated;
 }
 
-// Helper function to get a profile
 export async function getProfile(walletAddress: string) {
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('wallet_address', walletAddress)
-    .single();
-
-  if (error) {
-    if (error.code === 'PGRST116') { // No rows returned
-      return await createProfile(walletAddress, {});
-    }
-    throw error;
+  const profile = inMemoryProfiles.get(walletAddress);
+  if (!profile) {
+    return await createProfile(walletAddress, {});
   }
-
-  return data;
+  return profile;
 }
-
-const inMemoryProfiles = new Map<string, any>();
-const inMemoryStorage = new Map<string, any>();
 
 // Mock client factory function
 export const createSupabaseClient = (walletAddress?: string) => {
   console.log(`[MOCK] Creating Supabase client with wallet: ${walletAddress ? walletAddress.substring(0, 8) + '...' : 'none'}`);
-  
-  return {
-    from: (table: string) => {
-      // Mock the database methods
-      return {
-        select: (query?: string) => {
-          return {
-            eq: (column: string, value: string) => {
-              return {
-                single: async () => {
-                  console.log(`[MOCK] Getting ${table} where ${column} = ${value}`);
-                  
-                  if (table === 'user_profiles') {
-                    const profile = inMemoryProfiles.get(value);
-                    
-                    // If the profile doesn't exist yet, return an empty data result
-                    if (!profile) {
-                      return { data: null, error: null };
-                    }
-                    
-                    return { data: profile, error: null };
-                  }
-                  
-                  return { data: null, error: null };
-                }
-              };
-            }
-          };
-        },
-        upsert: (data: any) => {
-          return {
-            select: () => {
-              return {
-                single: async () => {
-                  console.log(`[MOCK] Upserting data into ${table}:`, data);
-                  
-                  if (table === 'user_profiles') {
-                    const walletAddr = data.wallet_address || '';
-                    
-                    // If the profile already exists, update it
-                    if (inMemoryProfiles.has(walletAddr)) {
-                      const existingProfile = inMemoryProfiles.get(walletAddr);
-                      const updatedProfile = { ...existingProfile, ...data };
-                      inMemoryProfiles.set(walletAddr, updatedProfile);
-                      return { data: updatedProfile, error: null };
-                    }
-                    
-                    // Otherwise create a new profile
-                    const newProfile = {
-                      id: `mock-${Date.now()}`,
-                      ...data
-                    };
-                    
-                    inMemoryProfiles.set(walletAddr, newProfile);
-                    return { data: newProfile, error: null };
-                  }
-                  
-                  return { data: null, error: null };
-                }
-              };
-            }
-          };
-        }
-      };
-    },
-    storage: {
-      from: (bucket: string) => {
-        return {
-          upload: async (path: string, file: any) => {
-            console.log(`[MOCK] Uploading file to ${bucket}/${path}`);
-            
-            // Store a reference to the file
-            const key = `${bucket}/${path}`;
-            inMemoryStorage.set(key, file);
-            
-            return { data: { path }, error: null };
-          },
-          getPublicUrl: (path: string) => {
-            // Generate a fake public URL
-            const publicUrl = `/mock-storage/${bucket}/${path}`;
-            console.log(`[MOCK] Getting public URL for ${bucket}/${path}: ${publicUrl}`);
-            
-            return { data: { publicUrl } };
-          }
-        };
-      }
-    }
-  };
+  return supabase;
 };
 
 // Default client for convenience
-export const supabaseMock = createSupabaseClient();
-
-// Additional utility mock functions
-
-export function subscribeToChannel(channelName: string, table: string, callback: (payload: any) => void) {
-  console.log(`[MOCK] Subscribing to channel ${channelName} for table ${table}`);
-  return {
-    unsubscribe: () => {
-      console.log(`[MOCK] Unsubscribing from channel ${channelName}`);
-    }
-  };
-}
-
-export function unsubscribeFromChannel(channelName: string) {
-  console.log(`[MOCK] Unsubscribing from channel ${channelName}`);
-}
+export const supabaseMock = supabase;
 
 // Interfaces for type checking
-
 export interface MessageAttachment {
   id: string;
   message_id: string;
@@ -270,116 +222,29 @@ export interface ChatMessage {
   reactions?: MessageReaction[];
   attachments?: MessageAttachment[];
   smart_action?: 'rephrase' | 'summarize' | 'idea' | 'task' | 'translate';
+  thread_count?: number;
 }
 
+// Mock functions for compatibility
 export async function sendMessage(
   content: string,
   senderAddress: string,
   room: string = 'general',
-  parentId?: string,
-  attachments?: File[]
+  attachments?: File[],
+  parentId?: string
 ) {
-  if (!content.trim() && (!attachments || attachments.length === 0)) {
-    return { error: new Error('Message content cannot be empty') };
-  }
-
-  if (!senderAddress) {
-    return { error: new Error('Sender address is required') };
-  }
-
-  try {
-    // First insert the message
-    const { data: message, error: messageError } = await supabaseMock
-      .from('messages')
-      .insert([{ 
-        content: content.trim(), 
-        sender_address: senderAddress, 
-        room,
-        parent_id: parentId
-      }])
-      .select(`
-        *,
-        attachments:message_attachments(*),
-        reactions:message_reactions(*)
-      `)
-      .single();
-
-    if (messageError) {
-      console.error('Error creating message:', messageError);
-      throw messageError;
-    }
-    if (!message) {
-      console.error('No message returned after creation');
-      throw new Error('Failed to create message');
-    }
-
-    // Then handle attachments if any
-    if (attachments?.length) {
-      const attachmentPromises = attachments.map(async (file) => {
-        try {
-        // Upload file to storage
-        const { data: fileData, error: uploadError } = await supabaseMock.storage
-          .from('attachments')
-          .upload(`${message.id}/${file.name}`, file);
-
-        if (uploadError) throw uploadError;
-
-        // Get public URL
-        const { data: { publicUrl } } = supabaseMock.storage
-          .from('attachments')
-          .getPublicUrl(`${message.id}/${file.name}`);
-
-        // Create attachment record
-        const { error: attachError } = await supabaseMock
-          .from('message_attachments')
-          .insert([{
-            message_id: message.id,
-            type: file.type,
-            url: publicUrl,
-            filename: file.name,
-            size: file.size
-          }]);
-
-        if (attachError) throw attachError;
-        } catch (error) {
-          console.error(`Error handling attachment ${file.name}:`, error);
-          throw error;
-        }
-      });
-
-      try {
-      await Promise.all(attachmentPromises);
-      } catch (error) {
-        console.error('Error handling attachments:', error);
-        throw error;
-      }
-    }
-
-    // Fetch the complete message with attachments and reactions
-    const { data: completeMessage, error: fetchError } = await supabaseMock
-      .from('messages')
-      .select(`
-        *,
-        attachments:message_attachments(*),
-        reactions:message_reactions(*)
-      `)
-      .eq('id', message.id)
-      .single();
-
-    if (fetchError) {
-      console.error('Error fetching complete message:', fetchError);
-      throw fetchError;
-    }
-    if (!completeMessage) {
-      console.error('No complete message found');
-      throw new Error('Failed to fetch complete message');
-    }
-
-    return { data: completeMessage };
-  } catch (error) {
-    console.error('Error in sendMessage:', error);
-    return { error };
-  }
+  console.log(`[MOCK] Sending message to room ${room}`);
+  const message = {
+    id: `mock-${Date.now()}`,
+    content,
+    sender_address: senderAddress,
+    room,
+    parent_id: parentId,
+    created_at: new Date().toISOString(),
+    attachments: [],
+    reactions: []
+  };
+  return { data: message, error: null };
 }
 
 export function subscribeToDirectMessages(
@@ -387,122 +252,16 @@ export function subscribeToDirectMessages(
   recipientAddress: string,
   callback: (message: DirectMessage) => void
 ) {
-  const channel = supabaseMock.channel(`dm:${[senderAddress, recipientAddress].sort().join(':')}`);
-
-  // Subscribe to DM changes
-  channel
-    .on(
-      'postgres_changes',
-      {
-        event: '*',
-        schema: 'public',
-        table: 'direct_messages',
-        filter: `or(and(sender_address.eq.${senderAddress},recipient_address.eq.${recipientAddress}),and(sender_address.eq.${recipientAddress},recipient_address.eq.${senderAddress}))`
-      },
-      async (payload) => {
-        const message = payload.new as DirectMessage;
-        const { data: completeMessage } = await supabaseMock
-          .from('direct_messages')
-          .select('*, attachments:direct_message_attachments(*)')
-          .eq('id', message.id)
-          .single();
-
-        if (completeMessage) {
-          callback(completeMessage);
-        }
-      }
-    )
-    // Subscribe to attachment changes
-    .on(
-      'postgres_changes',
-      {
-        event: '*',
-        schema: 'public',
-        table: 'direct_message_attachments',
-      },
-      async (payload: RealtimePostgresChangesPayload<{ message_id: string }>) => {
-        if (payload.new && 'message_id' in payload.new) {
-          const { data: message } = await supabaseMock
-            .from('direct_messages')
-            .select('*, attachments:direct_message_attachments(*)')
-            .eq('id', payload.new.message_id)
-            .single();
-
-          if (message) {
-            callback(message);
-          }
-        }
-      }
-    )
-    .subscribe();
-
-  return channel;
+  console.log(`[MOCK] Subscribing to DMs between ${senderAddress} and ${recipientAddress}`);
+  return supabase.channel(`dm:${[senderAddress, recipientAddress].sort().join(':')}`);
 }
 
 export function subscribeToMessages(
   room: string = 'general',
   callback: (message: ChatMessage) => void
 ) {
-  const channel = supabaseMock.channel('messages');
-
-  // Subscribe to new messages
-  channel
-    .on(
-      'postgres_changes',
-      {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'messages',
-        filter: `room=eq.${room}`,
-      },
-      async (payload) => {
-        const message = payload.new as ChatMessage;
-        const { data: completeMessage } = await supabaseMock
-          .from('messages')
-          .select(`
-            *,
-            attachments:message_attachments(*),
-            reactions:message_reactions(*)
-          `)
-          .eq('id', message.id)
-          .single();
-
-        if (completeMessage) {
-          callback(completeMessage);
-        }
-      }
-    )
-    // Subscribe to attachment changes
-    .on(
-      'postgres_changes',
-      {
-        event: '*',
-        schema: 'public',
-        table: 'message_attachments',
-      },
-      async () => {
-        // Refresh messages when attachments change
-        const messages = await getMessages(room);
-        messages.forEach(msg => callback(msg));
-      }
-    )
-    // Subscribe to reaction changes
-    .on(
-      'postgres_changes',
-      {
-        event: '*',
-        schema: 'public',
-        table: 'message_reactions',
-      },
-      async () => {
-        // Refresh messages when reactions change
-        const messages = await getMessages(room);
-        messages.forEach(msg => callback(msg));
-      }
-    )
-    .subscribe();
-
-  return channel;
+  console.log(`[MOCK] Subscribing to messages in room ${room}`);
+  return supabase.channel('messages');
 }
 
 export async function getMessages(
@@ -510,50 +269,18 @@ export async function getMessages(
   limit: number = 50,
   parentId?: string
 ): Promise<ChatMessage[]> {
-  try {
-    const query = supabaseMock
-      .from('messages')
-      .select(`
-        *,
-        attachments:message_attachments(*),
-        reactions:message_reactions(*)
-      `)
-      .eq('room', room)
-      .order('created_at', { ascending: true })
-      .limit(limit);
-
-    if (parentId) {
-      query.eq('parent_id', parentId);
-    } else {
-      query.is('parent_id', null);
-    }
-
-    const { data, error } = await query;
-    if (error) throw error;
-    
-    return (data as ChatMessage[]) || [];
-  } catch (error) {
-    console.error('Error fetching messages:', error);
-    return [];
-  }
+  console.log(`[MOCK] Getting messages from room ${room}`);
+  return [];
 }
 
 export async function getMessageAttachments(messageId: string) {
-  const { data } = await supabaseMock
-    .from('message_attachments')
-    .select('*')
-    .eq('message_id', messageId);
-  
-  return data as MessageAttachment[] || [];
+  console.log(`[MOCK] Getting attachments for message ${messageId}`);
+  return [];
 }
 
 export async function getMessageReactions(messageId: string) {
-  const { data } = await supabaseMock
-    .from('message_reactions')
-    .select('*')
-    .eq('message_id', messageId);
-  
-  return data as MessageReaction[] || [];
+  console.log(`[MOCK] Getting reactions for message ${messageId}`);
+  return [];
 }
 
 export async function toggleReaction(
@@ -561,87 +288,24 @@ export async function toggleReaction(
   senderAddress: string,
   emoji: string
 ) {
-  try {
-    // Check if reaction exists
-    const { data: existing } = await supabaseMock
-      .from('message_reactions')
-      .select('id')
-      .eq('message_id', messageId)
-      .eq('sender_address', senderAddress)
-      .eq('emoji', emoji)
-      .single();
-
-    if (existing) {
-      // Remove reaction
-      const { error: deleteError } = await supabaseMock
-        .from('message_reactions')
-        .delete()
-        .eq('id', existing.id);
-
-      if (deleteError) throw deleteError;
-    } else {
-      // Add reaction
-      const { error: insertError } = await supabaseMock
-        .from('message_reactions')
-        .insert([{
-          message_id: messageId,
-          sender_address: senderAddress,
-          emoji
-        }]);
-
-      if (insertError) throw insertError;
-    }
-
-    // Fetch updated reactions
-    const { data: reactions } = await supabaseMock
-      .from('message_reactions')
-      .select('*')
-      .eq('message_id', messageId);
-
-    return reactions as MessageReaction[] || [];
-  } catch (error) {
-    return { error };
-  }
+  console.log(`[MOCK] Toggling reaction ${emoji} on message ${messageId}`);
+  return [];
 }
 
 export async function deleteMessage(messageId: string, senderAddress: string) {
-  if (!messageId || !senderAddress) {
-    return { error: new Error('Message ID and sender address are required') };
-  }
+  console.log(`[MOCK] Deleting message ${messageId}`);
+  return { success: true };
+}
 
-  try {
-    // First check if the user owns the message
-    const { data: message, error: fetchError } = await supabaseMock
-      .from('messages')
-      .select('*')
-      .eq('id', messageId)
-      .eq('sender_address', senderAddress)
-      .single();
-
-    if (fetchError) {
-      console.error('Error fetching message:', fetchError);
-      throw fetchError;
+export function subscribeToChannel(channelName: string, table: string, callback: (payload: any) => void) {
+  console.log(`[MOCK] Subscribing to channel ${channelName} for table ${table}`);
+  return {
+    unsubscribe: () => {
+      console.log(`[MOCK] Unsubscribing from channel ${channelName}`);
     }
+  };
+}
 
-    if (!message) {
-      return { error: new Error('Message not found or you do not have permission to delete it') };
-    }
-
-    // Delete the message
-    const { error: deleteError } = await supabaseMock
-      .from('messages')
-      .delete()
-      .eq('id', messageId)
-      .eq('sender_address', senderAddress);
-
-    if (deleteError) {
-      console.error('Error deleting message:', deleteError);
-      throw deleteError;
-    }
-
-    return { success: true };
-  } catch (error) {
-    console.error('Error in deleteMessage:', error);
-    return { error };
-  }
+export function unsubscribeFromChannel(channelName: string) {
+  console.log(`[MOCK] Unsubscribing from channel ${channelName}`);
 }

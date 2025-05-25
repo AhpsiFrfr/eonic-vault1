@@ -2,6 +2,8 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
+import { useRouter } from 'next/navigation';
+import VaultSidebarLayout from '@/components/shared/VaultSidebarLayout';
 
 interface AppCardProps {
   title: string;
@@ -31,7 +33,16 @@ const AppCard: React.FC<AppCardProps> = ({ title, description, icon, comingSoon 
 );
 
 export default function VaultPage() {
+  const router = useRouter();
+
   const apps = [
+    {
+      title: "DEV-EON",
+      description: "ENIC.0 Powered development companion to assist with all of your back/frontend development!",
+      icon: "🧠",
+      comingSoon: false,
+      onClick: () => router.push('/dev-eon')
+    },
     {
       title: "Timepiece Visualizer",
       description: "Interactive explorer for EONIC timepiece NFTs with detailed metadata",
@@ -71,26 +82,28 @@ export default function VaultPage() {
   ];
 
   return (
-    <div className="w-full px-4 py-6 space-y-6 text-white">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">EONIC Vault</h2>
-        <div className="text-sm text-gray-400">
-          <span>6 apps available</span>
+    <VaultSidebarLayout>
+      <div className="w-full px-4 py-6 space-y-6 text-white">
+        <div className="flex justify-between items-center">
+          <h2 className="text-2xl font-bold">EONIC Vault</h2>
+          <div className="text-sm text-gray-400">
+            <span>7 apps available</span>
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {apps.map((app, index) => (
+            <AppCard
+              key={index}
+              title={app.title}
+              description={app.description}
+              icon={app.icon}
+              comingSoon={app.comingSoon}
+              onClick={app.onClick || (() => console.log(`Opening ${app.title}`))}
+            />
+          ))}
         </div>
       </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {apps.map((app, index) => (
-          <AppCard
-            key={index}
-            title={app.title}
-            description={app.description}
-            icon={app.icon}
-            comingSoon={app.comingSoon}
-            onClick={() => console.log(`Opening ${app.title}`)}
-          />
-        ))}
-      </div>
-    </div>
+    </VaultSidebarLayout>
   );
 } 

@@ -1,15 +1,15 @@
 'use client'
 
 import React from 'react';
-import DevHQNav from '@/components/DevVaultHQ/components/DevHQNav';
+import VaultSidebarLayout from '@/components/shared/VaultSidebarLayout';
+import { DevHQProvider } from '@/context/DevHQContext';
 
 export default function DevVaultLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex min-h-screen bg-gray-950">
-      <DevHQNav />
-      <main className="flex-1 ml-64 p-6">
+    <DevHQProvider>
+      <VaultSidebarLayout>
         {children}
-      </main>
-    </div>
+      </VaultSidebarLayout>
+    </DevHQProvider>
   );
 } 

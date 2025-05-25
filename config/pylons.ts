@@ -1,6 +1,18 @@
-import { FaStar, FaCoins, FaShieldAlt, FaClock, FaBullhorn, FaVolumeUp, FaSlidersH, FaMagic, FaBroadcastTower, FaHeart } from 'react-icons/fa';
+import { FaStar, FaCoins, FaShieldAlt, FaClock, FaBullhorn, FaMagic, FaBroadcastTower, FaHeart, FaUser, FaChartLine, FaGlobe, FaRss, FaPalette } from 'react-icons/fa';
 
 export const pylonConfig = [
+  {
+    name: 'EON-ID',
+    icon: FaUser,
+    description: 'Manage your dimensional identity profile',
+    color: '#4F46E5'
+  },
+  {
+    name: 'Phase Pulse Monitor',
+    icon: FaChartLine,
+    description: 'Monitor dimensional phase stability and resonance',
+    color: '#06B6D4'
+  },
   {
     name: 'XP Tracker',
     icon: FaStar,
@@ -26,34 +38,40 @@ export const pylonConfig = [
     color: '#0099FF'
   },
   {
-    name: 'Audio Control',
-    icon: FaVolumeUp,
-    description: 'Control sound effects and audio settings',
-    color: '#4B0082'
-  },
-  {
-    name: 'Audio Settings',
-    icon: FaSlidersH,
-    description: 'Configure advanced audio preferences',
-    color: '#8A2BE2'
-  },
-  {
     name: 'Announcements',
     icon: FaBullhorn,
     description: 'Stay updated with the latest vault news',
     color: '#FF69B4'
   },
   {
-    name: 'Glow Level Tester',
-    icon: FaMagic,
-    description: 'Test different glow level effects',
-    color: '#00D4FF'
+    name: 'RefraGate',
+    icon: FaGlobe,
+    description: 'Control dimensional gateway access and security',
+    color: '#9333EA'
   },
   {
     name: 'Radio',
     icon: FaBroadcastTower,
     description: 'Listen to ambient vault soundscapes',
     color: '#00FFFF'
+  },
+  {
+    name: 'Aether Feed',
+    icon: FaRss,
+    description: 'Live feed of dimensional activity and cosmic events',
+    color: '#10B981'
+  },
+  {
+    name: 'Vaultskin',
+    icon: FaPalette,
+    description: 'Customize vault themes and visual appearance',
+    color: '#EC4899'
+  },
+  {
+    name: 'Glow Level Tester',
+    icon: FaMagic,
+    description: 'Test different glow level effects',
+    color: '#00D4FF'
   },
   {
     name: 'Affirmation',

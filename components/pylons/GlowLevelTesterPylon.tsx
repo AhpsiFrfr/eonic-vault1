@@ -23,7 +23,6 @@ export default function GlowLevelTesterPylon() {
           <button
             key={lvl}
             onClick={() => handleLevelChange(lvl)}
-            onMouseEnter={() => playSFX('hover')}
             className={`w-8 h-8 text-sm rounded-full border border-cyan-500 transition-all duration-300 ${
               glowLevel === lvl ? 'bg-cyan-400 text-black' : 'bg-[#1c1c1c] text-cyan-300 hover:bg-cyan-700'
             }`}
@@ -37,7 +36,7 @@ export default function GlowLevelTesterPylon() {
       <div className="mt-4 p-4 rounded-lg bg-[#1c1c1c] border border-[#2c2c2c]">
         <div className="text-xs text-gray-400 mb-2">Current Glow Effect:</div>
         <div 
-          className={`w-full h-16 rounded-lg bg-[#121212] border border-[#2c2c2c] ${GLOW_INTENSITIES[glowLevel]}`}
+          className={`w-full h-16 rounded-lg bg-[#121212] border border-[#2c2c2c] ${GLOW_INTENSITIES[glowLevel as keyof typeof GLOW_INTENSITIES]}`}
         />
       </div>
 

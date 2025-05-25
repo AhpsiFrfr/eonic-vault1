@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eonic Vault Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Left Sidebar -->
+        <div class="sidebar">
+            <div class="logo">
+                <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M20 0L37.3205 10V30L20 40L2.67949 30V10L20 0Z" fill="url(#logo-gradient)"/>
+                    <defs>
+                        <linearGradient id="logo-gradient" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
+                            <stop offset="0%" stop-color="#9C4FD6"/>
+                            <stop offset="100%" stop-color="#E056FD"/>
+                        </linearGradient>
+                    </defs>
+                </svg>
+            </div>
+            <nav class="nav-menu">
+                <a href="#" class="nav-item active"><i class="fas fa-home"></i></a>
+                <a href="#" class="nav-item"><i class="fas fa-chart-line"></i></a>
+                <a href="#" class="nav-item"><i class="fas fa-file-alt"></i></a>
+                <a href="#" class="nav-item"><i class="fas fa-cog"></i></a>
+            </nav>
+        </div>
+
+        <!-- Main Content Area -->
+        <div class="main-content">
+            <!-- Top Navigation Bar -->
+            <div class="top-nav">
+                <div class="page-title">Home</div>
+                <div class="search-bar">
+                    <input type="text" placeholder="Search">
+                    <button><i class="fas fa-search"></i></button>
+                </div>
+                <div class="user-controls">
+                    <a href="#" class="notification-bell"><i class="fas fa-bell"></i></a>
+                    <a href="#" class="user-avatar">
+                        <img src="https://via.placeholder.com/32" alt="User">
+                    </a>
+                </div>
+            </div>
+
+            <!-- Dashboard Grid -->
+            <div class="dashboard-grid">
+                <!-- Top Row: Profile and Chatroom -->
+                <div class="grid-row">
+                    <!-- User Profile Widget -->
+                    <div class="widget profile-widget">
+                        <div class="profile-content">
+                            <div class="profile-image">
+                                <img src="https://via.placeholder.com/80" alt="Profile Picture">
+                            </div>
+                            <div class="profile-info">
+                                <h2 class="username">USERNAME</h2>
+                                <p class="title">Title</p>
+                                <div class="level-xp">
+                                    <span>Level 8</span>
+                                    <div class="xp-bar">
+                                        <div class="xp-progress" style="width: 65%"></div>
+                                    </div>
+                                    <span>7,450 / 10,000 XP</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Chatroom Widget -->
+                    <div class="widget chatroom-widget">
+                        <h3>Widget of chatroom of choice</h3>
+                        <div class="chat-container">
+                            <div class="chat-messages">
+                                <div class="message received">
+                                    <span class="sender">User1</span>
+                                    <p>Hello everyone!</p>
+                                </div>
+                                <div class="message received">
+                                    <span class="sender">User2</span>
+                                    <p>Hey there! How's EONIC doing today?</p>
+                                </div>
+                                <div class="message sent">
+                                    <span class="sender">You</span>
+                                    <p>Looking good! Up 12.5% this week.</p>
+                                </div>
+                            </div>
+                            <div class="chat-input">
+                                <input type="text" placeholder="Type a message...">
+                                <button><i class="fas fa-paper-plane"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Middle Row: EONIC Holdings -->
+                <div class="grid-row">
+                    <div class="widget holdings-widget">
+                        <div class="holdings-content">
+                            <div class="holdings-item">
+                                <h3>Your EONIC holdings</h3>
+                                <div class="holdings-value">
+                                    <span class="value">1,250.75</span>
+                                    <span class="currency">EONIC</span>
+                                    <span class="change positive">+3.2%</span>
+                                </div>
+                            </div>
+                            <div class="holdings-item">
+                                <h3>Your STAKED eonic</h3>
+                                <div class="holdings-value">
+                                    <span class="value">750.25</span>
+                                    <span class="currency">EONIC</span>
+                                    <span class="apy">APY: 12.4%</span>
+                                </div>
+                            </div>
+                            <div class="holdings-item">
+                                <h3>How users CAN stake</h3>
+                                <div class="stake-info">
+                                    <button class="stake-button">Stake Now</button>
+                                    <p>Min. stake: 100 EONIC</p>
+                                    <p>Lock period: 30 days</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bottom Row: Live EONIC Chart -->
+                <div class="grid-row">
+                    <div class="widget chart-widget">
+                        <div class="chart-header">
+                            <h3>Live EONIC Chart</h3>
+                            <div class="chart-controls">
+                                <button class="time-control active">1D</button>
+                                <button class="time-control">1W</button>
+                                <button class="time-control">1M</button>
+                            </div>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="eonicChart"></canvas>
+                        </div>
+                        <div class="chart-info">
+                            <div class="price-info">
+                                <span class="current-price">$3.75</span>
+                                <span class="price-change positive">+12.5% this week</span>
+                            </div>
+                            <div class="volume-info">
+                                <span>24h Volume:</span>
+                                <span class="volume">$1.2M</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

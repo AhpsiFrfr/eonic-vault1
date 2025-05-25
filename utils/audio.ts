@@ -31,7 +31,7 @@ export const playSFX = (type: SoundEffect) => {
 
   const soundMap: Record<SoundEffect, string> = {
     hover: '/sfx/hover.mp3',
-    click: '/sfx/click.mp3',
+    click: '/Audio/sfx-click.mp3',
     modal_open: '/sfx/modal_open.mp3',
     modal_close: '/sfx/modal_close.mp3',
     level_up: '/sfx/level_up.mp3',

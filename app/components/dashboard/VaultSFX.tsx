@@ -12,6 +12,14 @@ interface VaultSFXProps {
   playChime?: boolean
 }
 
+// Global click sound function
+export function playClickSound() {
+  const muted = localStorage.getItem('eonic-muted') === 'true'
+  if (!muted) {
+    playSFX('click')
+  }
+}
+
 export default function VaultSFX({
   levelUp,
   rewardPing,
@@ -24,40 +32,34 @@ export default function VaultSFX({
   useEffect(() => {
     if (muted) return
 
-    const handleHover = (e: Event) => {
-      const target = e.target as HTMLElement;
-      // Walk up the DOM tree to find widget or pylon class
-      let currentElement = target;
-      while (currentElement && !(currentElement.classList?.contains('widget') || currentElement.classList?.contains('pylon'))) {
-        currentElement = currentElement.parentElement as HTMLElement;
-      }
-      
-      if (currentElement?.classList?.contains('widget') || currentElement?.classList?.contains('pylon')) {
-        console.log('🔊 [VaultSFX] Playing hover sound for:', currentElement.className);
-        playSFX('hover');
-      }
-    }
-
     const handleClick = (e: Event) => {
       const target = e.target as HTMLElement;
-      // Walk up the DOM tree to find widget or pylon class
+      // Walk up the DOM tree to find clickable elements
       let currentElement = target;
-      while (currentElement && !(currentElement.classList?.contains('widget') || currentElement.classList?.contains('pylon'))) {
+      while (currentElement && !(
+        currentElement.tagName === 'BUTTON' || 
+        currentElement.tagName === 'A' || 
+        currentElement.role === 'button' ||
+        currentElement.classList?.contains('clickable')
+      )) {
         currentElement = currentElement.parentElement as HTMLElement;
       }
       
-      if (currentElement?.classList?.contains('widget') || currentElement?.classList?.contains('pylon')) {
-        console.log('🔊 [VaultSFX] Playing click sound for:', currentElement.className);
+      if (currentElement && (
+        currentElement.tagName === 'BUTTON' || 
+        currentElement.tagName === 'A' || 
+        currentElement.role === 'button' ||
+        currentElement.classList?.contains('clickable')
+      )) {
+        console.log('🔊 [VaultSFX] Playing click sound for:', currentElement.tagName);
         playSFX('click');
       }
     }
 
     // Use capture phase to ensure we get events before they're stopped
-    document.addEventListener('mouseover', handleHover, true);
     document.addEventListener('click', handleClick, true);
 
     return () => {
-      document.removeEventListener('mouseover', handleHover, true);
       document.removeEventListener('click', handleClick, true);
     }
   }, [muted])

@@ -6,8 +6,6 @@ import VaultAudio from './VaultAudio';
 import VaultReputation from './VaultReputation';
 import TokenSummary from './TokenSummary';
 import KPIMonitor from './KPIMonitor';
-import AudioSettingsWidget from './AudioSettingsWidget';
-import AudioControlWidget from './AudioControlWidget';
 import Announcements from './Announcements';
 import ENICAssistant from './ENICAssistant';
 import ENICOrb from './ENICOrb';
@@ -27,8 +25,6 @@ const defaultWidgets: DashboardWidget[] = [
   { id: 'vault-reputation', component: VaultReputation, title: 'Reputation' },
   { id: 'token-summary', component: TokenSummary, title: 'Token Summary' },
   { id: 'kpi-monitor', component: KPIMonitor, title: 'KPI Monitor' },
-  { id: 'audio-settings', component: AudioSettingsWidget, title: 'Audio Settings' },
-  { id: 'audio-control', component: AudioControlWidget, title: 'Audio Control' },
   { id: 'announcements', component: Announcements, title: 'Announcements' },
   { id: 'enic-assistant', component: ENICAssistant, title: 'ENIC Assistant' },
   { id: 'enic-orb', component: ENICOrb, title: 'ENIC Orb' },

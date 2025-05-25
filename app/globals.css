@@ -12,6 +12,20 @@
     @apply bg-zinc-900 border border-zinc-700 rounded-xl p-4 text-white w-full max-w-md 
            shadow-pylon hover:shadow-pylon-hover transition-all duration-200;
   }
+
+  /* New widget and pylon styling for the enhanced dashboard */
+  .widget, .pylon {
+    @apply bg-[#0a0e14] border border-glow rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all duration-300;
+  }
+
+  .border-glow {
+    border-color: rgba(66, 153, 225, 0.5); /* Egyptian blue glow */
+    box-shadow: 0 0 10px rgba(66, 153, 225, 0.3);
+  }
+
+  .pylon:hover {
+    box-shadow: 0 0 20px rgba(66, 153, 225, 0.5);
+  }
 }
 
 :root {

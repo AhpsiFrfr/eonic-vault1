@@ -56,7 +56,6 @@ export default function PylonNetwork({ pylons, components }: PylonNetworkProps) 
               <SortablePylonWrapper key={name} id={name}>
                 <div
                   className="pylon pylon-active rounded-lg border border-neutral-800 bg-neutral-950/70 p-5 transition-all"
-                  onMouseEnter={() => playSFX('hover')}
                   onClick={() => playSFX('click')}
                 >
                   {components[name] || <div className="text-red-500">Missing Pylon: {name}</div>}
