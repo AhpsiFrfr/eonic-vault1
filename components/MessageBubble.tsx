@@ -2,7 +2,7 @@
 
 import { motion, AnimatePresence } from 'framer-motion';
 import { useReactionAnimation } from '../hooks/useReactionAnimation';
-import { BusinessCardPanel } from './BusinessCardPanel';
+import { EonIDPanel } from './EonIDPanel';
 import { useState, useEffect, useRef } from 'react';
 import { Heart, Reply, Edit3, Pin, Copy, Link, Share, Trash2, CheckCircle, MessageSquare, Image, Smile } from 'lucide-react';
 
@@ -559,7 +559,7 @@ export function MessageBubble({
 
       {/* Business Card Panel */}
       {showProfile && showBusinessCard && (
-        <BusinessCardPanel
+        <EonIDPanel
           isOpen={showProfile}
           onClose={() => setShowProfile(false)}
           userData={{

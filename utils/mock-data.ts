@@ -95,22 +95,12 @@ function getAllProfiles(): Map<string, MockProfile> {
 // Helper to get a profile by wallet address
 export async function getMockProfile(walletAddress: string): Promise<UserProfile | null> {
   try {
-    // Return mock data directly for development
-    return {
-      wallet_address: walletAddress,
-      display_name: 'Buoyant',
-      title: 'Cosmic Explorer',
-      bio: 'Exploring the digital cosmos and building the future of Web4',
-      wallet_tagline: 'Building the future of digital identity',
-      avatar_url: '/images/avatars/default.svg',
-      widget_list: ['display_name', 'timepiece', 'xp_level', 'nft_gallery'],
-      is_public: true,
-      timepiece_url: '/images/timepiece-nft.png',
-      timepiece_stage: 'Genesis',
-      timepiece_xp: 2500,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    };
+    if (!walletAddress) {
+      return null;
+    }
+
+    const profiles = await getAllProfiles();
+    return profiles.get(walletAddress) || null;
   } catch (err) {
     console.error('Error in getMockProfile:', err);
     return null;
@@ -138,10 +128,13 @@ export function saveMockProfile(profile: MockProfile): void {
     }));
   }
   
-  console.log('[MOCK] Profile saved:', profile.wallet_address.substring(0, 8) + '...', {
-    avatar: profile.avatar_url ? 'Set' : 'Not set',
-    timepiece: profile.timepiece_url || existingProfile?.timepiece_url || '/images/timepiece-nft.png'
-  });
+  // Only log in development
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[MOCK] Profile saved:', profile.wallet_address.substring(0, 8) + '...', {
+      avatar: profile.avatar_url ? 'Set' : 'Not set',
+      timepiece: profile.timepiece_url || existingProfile?.timepiece_url || '/images/timepiece-nft.png'
+    });
+  }
 }
 
 // Create a default profile for a wallet
