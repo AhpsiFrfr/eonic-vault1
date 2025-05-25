@@ -11,14 +11,9 @@ export default function HyperspaceTransition({ show }: { show: boolean }) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.6 }}
+          transition={{ duration: 0.8 }}
         >
-          <motion.div
-            className="w-full h-full bg-gradient-radial from-white/10 via-indigo-600 to-black opacity-60 animate-pulse"
-            initial={{ scale: 0.9, rotate: 0 }}
-            animate={{ scale: 1.5, rotate: 360 }}
-            transition={{ repeat: Infinity, duration: 1.5, ease: 'linear' }}
-          />
+          {/* Simple fade in black - no spinning animation */}
         </motion.div>
       )}
     </AnimatePresence>
